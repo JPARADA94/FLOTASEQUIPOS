@@ -273,24 +273,35 @@ try:
         serie = df[var_int].dropna()
         min_v, max_v = serie.min(), serie.max()
         bins = pd.interval_range(start=min_v, end=max_v, periods=n_int)
+        # Conteos
         conteos = [serie.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
+        # Etiquetas de intervalo
         labels = [f"< {bins[0].right:.2f}"] + [f"{iv.left:.2f}-{iv.right:.2f}" for iv in bins[1:]]
-        col_int1, col_int2 = st.columns(2)
-        with col_int1:
+        # Mostrar gráfico y tabla de resumen
+        col_abs, col_rel = st.columns(2)
+        # Frecuencia absoluta
+        with col_abs:
             st.subheader("Frecuencia absoluta")
-            fig8, ax8 = plt.subplots(figsize=(4,3))
-            ax8.bar(labels, conteos, color=sns.color_palette('tab10', len(labels)))
-            ax8.set_xticklabels(labels, rotation=45, ha='right')
-            ax8.set_ylabel('Conteo')
-            st.pyplot(fig8)
-        with col_int2:
+            fig_abs, ax_abs = plt.subplots(figsize=(4,3))
+            ax_abs.bar(labels, conteos, color=sns.color_palette('tab10', len(labels)))
+            ax_abs.set_xticklabels(labels, rotation=45, ha='right')
+            ax_abs.set_ylabel('Conteo')
+            st.pyplot(fig_abs)
+        # Frecuencia relativa
+        with col_rel:
             st.subheader("Frecuencia relativa (%)")
             rel = [c / sum(conteos) * 100 for c in conteos]
-            fig9, ax9 = plt.subplots(figsize=(4,3))
-            ax9.bar(labels, rel, color=sns.color_palette('tab20', len(labels)))
-            ax9.set_xticklabels(labels, rotation=45, ha='right')
-            ax9.set_ylabel('Porcentaje')
-            st.pyplot(fig9)
+            fig_rel, ax_rel = plt.subplots(figsize=(4,3))
+            ax_rel.bar(labels, rel, color=sns.color_palette('tab20', len(labels)))
+            ax_rel.set_xticklabels(labels, rotation=45, ha='right')
+            ax_rel.set_ylabel('Porcentaje')
+            st.pyplot(fig_rel)
+        # Tabla resumen
+        st.markdown("**Resumen de conteos por intervalo:**")
+        df_bins = pd.DataFrame({'Intervalo': labels, 'Conteo': conteos, 'Porcentaje (%)': [f"{p:.1f}" for p in rel]})
+        st.table(df_bins)
 
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
+    st.error(f"❌ Error al procesar archivo: {e}")
+
