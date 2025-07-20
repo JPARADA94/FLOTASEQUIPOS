@@ -1,5 +1,5 @@
 # flotasapp.py
-# Autor: [Javier Parada]
+# Autor: [Tu Nombre]
 # Fecha de creación: 2025-07-20
 # Descripción: Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
 # Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
@@ -48,7 +48,7 @@ st.title("📊 Análisis de Flotas - Mobil Serv")
 # Mostrar información de autor
 st.markdown(
     """
-    **Autor:** Javier Parada - Ingeniero de soporte en campo  \
+    **Autor:** Tu Nombre  \
     **Fecha de creación:** 2025-07-20
     """
 )
@@ -109,7 +109,7 @@ try:
     mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
     overall_mean = mean_int.mean()
 
-    # ---------------------------------------------
+        # ---------------------------------------------
     # Resumen general
     # ---------------------------------------------
     st.subheader("🔎 Resumen general")
@@ -121,24 +121,16 @@ try:
 - Equipos distintos: **{equipos}**  
 - Intervalo medio de muestreo: **{overall_mean:.1f}** días
 """)
+    # Métricas destacadas en formato cards
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    metric_col1.metric("Total muestras", total)
+    metric_col2.metric("Equipos analizados", equipos)
+    metric_col3.metric("Lubricantes distintos", lubs)
+    metric_col4.metric("Intervalo medio (días)", f"{overall_mean:.1f}")
 
-        # ---------------------------------------------
-    # Opción de filtrado de equipos
-    # ---------------------------------------------
-    st.markdown("### Filtrado de equipos a analizar")
-    unidades = df['Unit ID'].unique().tolist()
-    modo = st.radio(
-        "¿Deseas analizar todos los equipos o excluir algunos?", 
-        ("Todos","Excluir algunos"),
-        horizontal=True
-    )
-    if modo == "Excluir algunos":
-        excl = st.multiselect("Selecciona equipos a excluir:", unidades)
-        if excl:
-            df = df[~df['Unit ID'].isin(excl)]
-    
     # ---------------------------------------------
     # Gráficos fijos (3 filas x 2 columnas)
+    # --------------------------------------------- (3 filas x 2 columnas)
     # --------------------------------------------- (3 filas x 2 columnas)
     # ---------------------------------------------
     # Fila 1: Estados y frecuencia
@@ -353,3 +345,4 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
+
