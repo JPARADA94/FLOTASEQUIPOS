@@ -1,4 +1,7 @@
 # flotasapp.py
+# Autor: [Tu Nombre]
+# Fecha de creación: 2025-07-20
+# Descripción: Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
 # Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
 
 import streamlit as st
@@ -44,7 +47,6 @@ vars_correl = [
 st.title("📊 Análisis de Flotas - Mobil Serv")
 st.markdown(
     """
-    Autor: Javier Parada - Ingeniero de soporte en campo
     Esta aplicación permite analizar datos históricos de flotas.
     ✅ **Importante:** el archivo Excel debe estar filtrado (un único tipo de equipo) y seguir el formato **Mobil Serv**.
     """
@@ -344,3 +346,4 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
+
