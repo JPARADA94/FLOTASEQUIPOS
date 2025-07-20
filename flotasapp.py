@@ -16,6 +16,22 @@ from itertools import combinations
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 
 # ---------------------------------------------
+# Estilos personalizados
+# ---------------------------------------------
+st.markdown("""
+<style>
+  .stApp { background-color: #f5f5f5; }
+  .block {
+    padding: 1rem;
+    margin: 1rem 0;
+    border: 1px solid #DDDDDD;
+    border-radius: 8px;
+    background-color: #FFFFFF;
+  }
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------
 # Encabezados esperados y mapeo de estados
 # ---------------------------------------------
 columnas_esperadas = [
@@ -345,4 +361,3 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
-
