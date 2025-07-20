@@ -106,7 +106,7 @@ if archivo:
             labels = {'Normal':'🟢 Normal','Precaution':'🟡 Precaución','Abnormal':'🔴 Alerta'}
             display = [labels.get(e,e) for e in estados]
             valores = conteo.values
-n            
+
             fig, ax = plt.subplots(figsize=(4,3))
             sns.barplot(x=display, y=valores, ax=ax)
             ax.set_title("Estados de muestras", fontsize=12)
