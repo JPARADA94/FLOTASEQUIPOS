@@ -207,16 +207,21 @@ try:
         for i,pct in enumerate(cum6): ax6_line.text(pct+1, i, f"{pct:.0f}%", va='center')
         st.pyplot(fig6)
 
-    # Relación de variables por pairplot
-    st.subheader("🔍 Relación de variables seleccionadas")
-    n_vars = st.number_input("¿Cuántas variables quieres relacionar?", min_value=2, max_value=len(heatmap_vars), value=2)
-    vars_sel = st.multiselect("Selecciona las variables:", heatmap_vars, default=heatmap_vars[:n_vars])
+        # Relación de variables seleccionadas con mapa de calor
+    st.subheader("🔍 Correlación de variables seleccionadas (Heatmap)")
+    n_vars = st.number_input(
+        "¿Cuántas variables quieres correlacionar?", min_value=2,
+        max_value=len(heatmap_vars), value=2)
+    vars_sel = st.multiselect(
+        "Selecciona las variables:", heatmap_vars,
+        default=heatmap_vars[:n_vars])
     if len(vars_sel)==n_vars:
         st.info(f"Analizando: {', '.join(vars_sel)}")
-        pair = sns.pairplot(df[vars_sel], diag_kind='kde', plot_kws={'alpha':0.6})
-        st.pyplot(pair.fig)
+        corr_mat = df[vars_sel].corr()
+        fig_hm, ax_hm = plt.subplots(figsize=(4,3))
+        sns.heatmap(corr_mat, annot=True, fmt='.2f', cmap='coolwarm', ax=ax_hm)
+        ax_hm.set_title('Heatmap de correlación')
+        st.pyplot(fig_hm)
     else:
         st.warning(f"Selecciona exactamente {n_vars} variables.")
 
-except Exception as e:
-    st.error(f"❌ Error al procesar archivo: {e}")
