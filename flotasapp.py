@@ -196,49 +196,30 @@ try:
             ax6_line.annotate(f"{y:.0f}%", (x, y), textcoords='offset points', xytext=(0,5))
         st.pyplot(fig6)
 
-    # Relación variables con Scatter o Heatmap
-    rel1, rel2 = st.columns(2)
-    with rel1:
-        st.subheader("🔍 Relación variables 1")
-        x1 = st.selectbox("Variable X", heatmap_vars, key="x1")
-        y1 = st.selectbox("Variable Y", heatmap_vars, key="y1")
-        tipo1 = st.radio("Tipo de gráfico", ["Heatmap","Scatter"], key="tipo1", horizontal=True)
-        if tipo1 == "Heatmap":
-            corr1 = df[[x1, y1]].corr()
-            fig7, ax7 = plt.subplots(figsize=(4, 3))
-            sns.heatmap(corr1, annot=True, fmt=".2f", cmap="coolwarm", ax=ax7)
-            ax7.set_title(f"Correlación: {x1} vs {y1}")
-            st.pyplot(fig7)
+    # ---------------------------------------------
+        # Relación de múltiples variables elegidas por el usuario
+        # ---------------------------------------------
+        st.subheader("🔍 Relación de variables seleccionadas")
+        # Número de variables a relacionar
+        n_vars = st.number_input(
+            "¿Cuántas variables quieres relacionar?", min_value=2,
+            max_value=len(heatmap_vars), value=2, step=1)
+        # Selección de variables
+        vars_sel = st.multiselect(
+            "Selecciona exactamente las variables:", heatmap_vars,
+            default=heatmap_vars[:n_vars], help="Elige las variables a incluir en el análisis")
+        if len(vars_sel) != n_vars:
+            st.warning(f"Selecciona {n_vars} variables para continuar.")
         else:
-            fig7, ax7 = plt.subplots(figsize=(4, 3))
-            sns.scatterplot(data=df, x=x1, y=y1,
-                            hue=df['Report Status'].map({'Normal':'Normal','Caution':'Caution','Alert':'Alert'}),
-                            palette={'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}, alpha=0.7, ax=ax7)
-            sns.regplot(data=df, x=x1, y=y1, scatter=False, ax=ax7, color="black")
-            ax7.set_title(f"Scatter: {x1} vs {y1}")
-            st.pyplot(fig7)
-    with rel2:
-        st.subheader("🔍 Relación variables 2")
-        x2 = st.selectbox("Variable X", heatmap_vars, key="x2")
-        y2 = st.selectbox("Variable Y", heatmap_vars, key="y2")
-        tipo2 = st.radio("Tipo de gráfico", ["Heatmap","Scatter"], key="tipo2", horizontal=True)
-        if tipo2 == "Heatmap":
-            corr2 = df[[x2, y2]].corr()
-            fig8, ax8 = plt.subplots(figsize=(4, 3))
-            sns.heatmap(corr2, annot=True, fmt=".2f", cmap="coolwarm", ax=ax8)
-            ax8.set_title(f"Correlación: {x2} vs {y2}")
-            st.pyplot(fig8)
-        else:
-            fig8, ax8 = plt.subplots(figsize=(4, 3))
-            sns.scatterplot(data=df, x=x2, y=y2,
-                            hue=df['Report Status'].map({'Normal':'Normal','Caution':'Caution','Alert':'Alert'}),
-                            palette={'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}, alpha=0.7, ax=ax8)
-            sns.regplot(data=df, x=x2, y=y2, scatter=False, ax=ax8, color="black")
-            ax8.set_title(f"Scatter: {x2} vs {y2}")
-            st.pyplot(fig8)
+            st.info(f"Analizando: {', '.join(vars_sel)}")
+            # Generar pairplot para las variables seleccionadas
+            fig_pair = sns.pairplot(df[vars_sel], diag_kind='kde',
+                                    plot_kws={'alpha':0.6},
+                                    diag_kws={'shade':True})
+            st.pyplot(fig_pair.fig)
+    except Exception as e:
+        st.error(f"❌ Error al procesar archivo: {e}")
 
-except Exception as e:
-    st.error(f"❌ Error al procesar archivo: {e}")
 
 
 
