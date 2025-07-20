@@ -71,11 +71,11 @@ if archivo:
                 if df[col].notna().sum() < 5:
                     columnas_invalidas.append((col, df[col].notna().sum()))
 
-            # Informar al usuario sobre columnas no válidas
+            # Mostrar columnas ignoradas en un menú desplegable
             if columnas_invalidas:
-                st.warning("⚠️ Las siguientes columnas no tienen suficientes datos y serán ignoradas:")
-                for col, count in columnas_invalidas:
-                    st.write(f"• {col}: {count} datos válidos")
+                with st.expander("📋 Columnas ignoradas por tener pocos datos válidos"):
+                    for col, count in columnas_invalidas:
+                        st.markdown(f"• **{col}**: {count} datos válidos")
 
             # ---------------------------------------------
             # 7. GRÁFICO DE ESTADOS DE REPORTE
@@ -86,11 +86,17 @@ if archivo:
                 etiquetas = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
                 estados = [etiquetas.get(k, k) for k in conteo_estados.index]
 
-                fig, ax = plt.subplots()
+                fig, ax = plt.subplots(figsize=(4, 3))
                 ax.bar(estados, conteo_estados.values, color=['green', 'orange', 'red'])
                 ax.set_ylabel("Cantidad de muestras")
-                ax.set_title("Distribución de estados según Report Status")
+                ax.set_title("Distribución por estado")
                 st.pyplot(fig)
+
+                # Nota interpretativa
+                st.markdown("""
+                🔍 **Nota**: La distribución de estados permite identificar el porcentaje de muestras en condiciones críticas o que requieren atención.  
+                Se recomienda revisar los equipos en estado 🟡 *Precaución* y 🔴 *Alerta* para priorizar acciones de mantenimiento.
+                """)
             else:
                 st.error("No se encontró la columna 'Report Status'.")
 
