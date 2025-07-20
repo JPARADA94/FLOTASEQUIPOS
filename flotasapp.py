@@ -58,6 +58,17 @@ try:
     # Fechas
     df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
 
+    # ---------------------------------------------
+    # Limpiar y convertir a numérico columnas de variables de análisis
+    # ---------------------------------------------
+    for col in heatmap_vars:
+        if col in df.columns:
+            df[col] = pd.to_numeric(
+                df[col].astype(str)
+                     .str.replace(r"[^0-9\.\-]", "", regex=True),
+                errors='coerce'
+            )
+
     # Mapear RESULT_ a estados
     result_cols = [c for c in df.columns if c.startswith('RESULT_')]
     for c in result_cols:
