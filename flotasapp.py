@@ -264,19 +264,11 @@ try:
     # ---------------------------------------------
     # Distribución por intervalos
     # ---------------------------------------------
-    st.markdown(
-        """
-        **Frecuencia absoluta**: número de observaciones en cada rango de valores. Permite ver cuántas muestras caen en cada intervalo.  
-        **Frecuencia relativa (%)**: proporción de observaciones en cada rango respecto al total, expresado en porcentaje. Facilita comparar intervalos de distinto tamaño o entre variables.
-        """
-    )
-    # Disponibles para intervalos
     numeric_cols = df.select_dtypes(include='number').columns.tolist()
     vars_int = [v for v in vars_correl if v in numeric_cols]
-    # Primer bloque de intervalos
-    st.subheader("📊 Distribución por intervalos (Variable 1)")
-    var_int = st.selectbox("Variable 1:", vars_int, key="var_int1")
-    n_int = st.number_input("Número de intervalos (Variable 1):", min_value=2, max_value=50, value=5, step=1, key="n_int1")
+    st.subheader("📊 Distribución por intervalos")
+    var_int = st.selectbox("Variable para intervalos:", vars_int)
+    n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1)
     if var_int:
         serie = df[var_int].dropna()
         min_v, max_v = serie.min(), serie.max()
@@ -300,39 +292,31 @@ try:
             ax_rel.set_ylabel('Porcentaje')
             st.pyplot(fig_rel)
         st.markdown("**Resumen de Variable 1 por intervalo:**")
-        df_bins1 = pd.DataFrame({'Intervalo': labels, 'Conteo': conteos, 'Porcentaje (%)': [f"{p:.1f}" for p in rel]})
-        st.table(df_bins1)
-    # Segundo bloque de intervalos
-    st.subheader("📊 Distribución por intervalos (Variable 2)")
-    var_int2 = st.selectbox("Variable 2:", vars_int, key="var_int2")
-    n_int2 = st.number_input("Número de intervalos (Variable 2):", min_value=2, max_value=50, value=5, step=1, key="n_int2")
-    if var_int2:
-        serie2 = df[var_int2].dropna()
-        min_v2, max_v2 = serie2.min(), serie2.max()
-        bins2 = pd.interval_range(start=min_v2, end=max_v2, periods=n_int2)
-        conteos2 = [serie2.between(iv.left, iv.right, inclusive='left').sum() for iv in bins2]
-        labels2 = [f"< {bins2[0].right:.2f}"] + [f"{iv.left:.2f} - {iv.right:.2f}" for iv in bins2[1:]]
-        col_abs2, col_rel2 = st.columns(2)
-        with col_abs2:
-            st.subheader("Frecuencia absoluta")
-            fig_abs2, ax_abs2 = plt.subplots(figsize=(4,3))
-            ax_abs2.bar(labels2, conteos2, color=sns.color_palette('tab10', len(labels2)))
-            ax_abs2.set_xticklabels(labels2, rotation=45, ha='right')
-            ax_abs2.set_ylabel('Conteo')
-            st.pyplot(fig_abs2)
-        with col_rel2:
-            st.subheader("Frecuencia relativa (%)")
-            rel2 = [c / sum(conteos2) * 100 for c in conteos2]
-            fig_rel2, ax_rel2 = plt.subplots(figsize=(4,3))
-            ax_rel2.bar(labels2, rel2, color=sns.color_palette('tab20', len(labels2)))
-            ax_rel2.set_xticklabels(labels2, rotation=45, ha='right')
-            ax_rel2.set_ylabel('Porcentaje')
-            st.pyplot(fig_rel2)
-        st.markdown("**Resumen de Variable 2 por intervalo:**")
-        df_bins2 = pd.DataFrame({'Intervalo': labels2, 'Conteo': conteos2, 'Porcentaje (%)': [f"{p:.1f}" for p in rel2]})
-        st.table(df_bins2)
+        df_bins = pd.DataFrame({'Intervalo': labels, 'Conteo': conteos, 'Porcentaje (%)': [f"{p:.1f}" for p in rel]})
+        st.table(df_bins)
+
+    # ---------------------------------------------
+    # Evolución temporal de variables seleccionadas
+    # ---------------------------------------------
+    st.subheader("📈 Evolución temporal de variables")
+    vars_time = [v for v in vars_correl if v in numeric_cols]
+    sel_time = st.multiselect("Selecciona variables a graficar en el tiempo:", vars_time)
+    if sel_time:
+        df_time = df[['Date Reported'] + sel_time].dropna(subset=['Date Reported'])
+        df_time = df_time.set_index('Date Reported').sort_index()
+        # Resample diario y calcular media
+        df_res = df_time.resample('D').mean()
+        fig_time, ax_time = plt.subplots(figsize=(8, 4))
+        for col in sel_time:
+            ax_time.plot(df_res.index, df_res[col], marker='o', label=col)
+        ax_time.set_xlabel('Fecha')
+        ax_time.set_ylabel('Valor medio')
+        ax_time.legend()
+        plt.xticks(rotation=45)
+        st.pyplot(fig_time)
 
 except Exception as e:
+    st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
 
 except Exception as e:
