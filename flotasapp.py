@@ -7,6 +7,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ---------------------------------------------
 # 2. CONFIGURACIÓN INICIAL DE LA APLICACIÓN
@@ -85,11 +86,14 @@ if archivo:
                 conteo_estados = df['Report Status'].value_counts()
                 etiquetas = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
                 estados = [etiquetas.get(k, k) for k in conteo_estados.index]
+                colores = ['#2ecc71', '#f1c40f', '#e74c3c']
 
-                fig, ax = plt.subplots(figsize=(4, 3))
-                ax.bar(estados, conteo_estados.values, color=['green', 'orange', 'red'])
+                fig, ax = plt.subplots(figsize=(4.5, 3.5))
+                sns.barplot(x=estados, y=conteo_estados.values, palette=colores[:len(estados)], ax=ax)
                 ax.set_ylabel("Cantidad de muestras")
-                ax.set_title("Distribución por estado")
+                ax.set_xlabel("")
+                ax.set_title("Distribución por estado", fontsize=11)
+                ax.spines[['top', 'right']].set_visible(False)
                 st.pyplot(fig)
 
                 # Nota interpretativa
@@ -108,3 +112,4 @@ if archivo:
 
     except Exception as e:
         st.error(f"❌ Error al procesar el archivo: {str(e)}")
+
