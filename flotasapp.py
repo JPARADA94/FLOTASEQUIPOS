@@ -177,34 +177,35 @@ if archivo:
                 ax6.annotate(int(v), (v+0.5, i), va='center')
             st.pyplot(fig6)
 
+                # ---------------------------------------------
+        # Nuevos mapas de calor (usuario elige variables fijas)
         # ---------------------------------------------
-        # Nuevos mapas de calor
-        # ---------------------------------------------
+        heatmap_vars = [
+            'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
+            'Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)', 'Mo (Molybdenum)',
+            'Pb (Lead)', 'PQ Index',
+            'Oxidation (Ab/cm)', 'TBN (mg KOH/g)', 'Visc@100C (cSt)', 'TAN (mg KOH/g)',
+            'Fuel Dilut. (Vol%)', 'Nitration (Ab/cm)', 'Particle Count  >4um', 'Particle Count  >6um',
+            'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)'
+        ]
         h1, h2 = st.columns(2)
         with h1:
-            st.subheader("🌡️ Mapa de calor: Relación de variables")
-            cat1 = st.selectbox("Categoría (Mapa 1)", ["Desgaste","Contaminación","Lubricante"], key="cat1")
-            if cat1=="Desgaste": vars1=vars_desgaste
-            elif cat1=="Contaminación": vars1=vars_contaminacion
-            else: vars1=vars_lubricante
-            x1 = st.selectbox("Variable X", vars1, key="x1")
-            y1 = st.selectbox("Variable Y", vars1, key="y1")
-            corr1 = df[[x1,y1]].corr()
-            fig7, ax7 = plt.subplots(figsize=(4,3))
+            st.subheader("🌡️ Mapa de calor 1")
+            x1 = st.selectbox("Variable X", heatmap_vars, key="x1")
+            y1 = st.selectbox("Variable Y", heatmap_vars, key="y1")
+            corr1 = df[[x1, y1]].corr()
+            fig7, ax7 = plt.subplots(figsize=(4, 3))
             sns.heatmap(corr1, annot=True, fmt=".2f", ax=ax7)
             st.pyplot(fig7)
         with h2:
-            st.subheader("🌡️ Mapa de calor: Relación de variables")
-            cat2 = st.selectbox("Categoría (Mapa 2)", ["Desgaste","Contaminación","Lubricante"], key="cat2")
-            if cat2=="Desgaste": vars2=vars_desgaste
-            elif cat2=="Contaminación": vars2=vars_contaminacion
-            else: vars2=vars_lubricante
-            x2 = st.selectbox("Variable X", vars2, key="x2")
-            y2 = st.selectbox("Variable Y", vars2, key="y2")
-            corr2 = df[[x2,y2]].corr()
-            fig8, ax8 = plt.subplots(figsize=(4,3))
+            st.subheader("🌡️ Mapa de calor 2")
+            x2 = st.selectbox("Variable X", heatmap_vars, key="x2")
+            y2 = st.selectbox("Variable Y", heatmap_vars, key="y2")
+            corr2 = df[[x2, y2]].corr()
+            fig8, ax8 = plt.subplots(figsize=(4, 3))
             sns.heatmap(corr2, annot=True, fmt=".2f", ax=ax8)
             st.pyplot(fig8)
 
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
+
