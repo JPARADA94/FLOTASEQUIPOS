@@ -93,21 +93,21 @@ if archivo:
                 for c, n in invalidas:
                     st.write(f"• {c}: {n} datos válidos")
 
-        # Preparar diseño de grillas
+        # Gráficos en una sola fila
         col1, col2 = st.columns(2)
 
-        # 1. Gráfico: Distribución de Report Status
+        # Gráfico 1: Distribución de Report Status
         with col1:
             st.subheader("📈 Estados de muestras (Report Status)")
             conteo = df['Report Status'].value_counts()
-            # Etiquetas y colores dinámicos
-            labels_map = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
-            display = [labels_map.get(lbl, lbl) for lbl in conteo.index]
-            valores = conteo.values
-            colors = [('#2ecc71' if lbl=='Normal' else '#f1c40f' if lbl=='Precaution' else '#e74c3c') for lbl in conteo.index]
+            # Asegurar orden: Normal, Precaution, Abnormal
+            estados = ['Normal', 'Precaution', 'Abnormal']
+            valores = [conteo.get(e, 0) for e in estados]
+            etiquetas = ['🟢 Normal', '🟡 Precaución', '🔴 Alerta']
+            colores = ['#2ecc71', '#f1c40f', '#e74c3c']
 
-            fig, ax = plt.subplots(figsize=(4,3))
-            sns.barplot(x=display, y=valores, palette=colors, ax=ax)
+            fig, ax = plt.subplots(figsize=(4, 3))
+            sns.barplot(x=etiquetas, y=valores, palette=colores, ax=ax)
             ax.set_ylabel("Cantidad de muestras")
             ax.set_xlabel("")
             ax.spines[['top','right']].set_visible(False)
@@ -118,12 +118,12 @@ if archivo:
             st.pyplot(fig)
             st.markdown("🔍 Prioriza acciones en 🟡 Precaución y 🔴 Alerta.")
 
-        # 2. Gráfico: Frecuencia de muestreo top 15
+        # Gráfico 2: Frecuencia de muestreo top 15
         with col2:
             n_top = min(15, df['Unit ID'].nunique())
             st.subheader(f"📊 Muestreos: Top {n_top} equipos")
             top_counts = df['Unit ID'].value_counts().head(n_top)
-            fig2, ax2 = plt.subplots(figsize=(4,3))
+            fig2, ax2 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=top_counts.values, y=top_counts.index, palette='Blues_r', ax=ax2)
             ax2.set_xlabel("Número de muestras")
             ax2.set_ylabel("")
@@ -134,13 +134,13 @@ if archivo:
                              va='center')
             st.pyplot(fig2)
 
-        # 3. Intervalo promedio de muestreo Top 15
+        # Gráfico 3: Intervalo promedio de muestreo Top 15
         st.subheader("⏱️ Intervalo promedio de muestreo - Top 15 equipos")
         df_sorted = df.sort_values(['Unit ID','Date Reported'])
         mean_intervals = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
         top_units = top_counts.index
         mean_top = mean_intervals.loc[top_units].dropna()
-        fig3, ax3 = plt.subplots(figsize=(6,3))
+        fig3, ax3 = plt.subplots(figsize=(6, 3))
         sns.barplot(x=mean_top.values, y=mean_top.index, palette='mako', ax=ax3)
         ax3.set_xlabel('Días promedio')
         ax3.set_ylabel('Unit ID')
@@ -152,7 +152,7 @@ if archivo:
         st.pyplot(fig3)
 
         # Promedio global de muestreo
-overall_mean = mean_intervals.mean()
+        overall_mean = mean_intervals.mean()
         st.markdown(f"**Intervalo medio de muestreo de toda la flota:** {overall_mean:.1f} días")
 
     except Exception as e:
