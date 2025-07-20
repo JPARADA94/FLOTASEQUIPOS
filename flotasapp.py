@@ -280,75 +280,69 @@ try:
     # ---------------------------------------------
     # Distribución por intervalos
     # ---------------------------------------------
+    st.subheader("📊 Distribución por intervalos de dos variables")
+    # Variables numéricas disponibles
     numeric_cols = df.select_dtypes(include='number').columns.tolist()
     vars_int = [v for v in vars_correl if v in numeric_cols]
-    st.subheader("📊 Distribución por intervalos")
-    var_int = st.selectbox("Variable para intervalos:", vars_int)
-    n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1)
-    if var_int:
-        serie = df[var_int].dropna()
-        min_v, max_v = serie.min(), serie.max()
-        bins = pd.interval_range(start=min_v, end=max_v, periods=n_int)
-        conteos = [serie.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
+    # Selección de dos variables
+    var1 = st.selectbox("Variable 1:", vars_int, key="var_int1")
+    var2 = st.selectbox("Variable 2:", vars_int, key="var_int2")
+    n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1, key="n_int")
+    if var1 and var2:
+        # Series limpias
+        s1 = df[var1].dropna()
+        s2 = df[var2].dropna()
+        # Definir rangos comunes del min de ambas al max de ambas
+        overall_min = min(s1.min(), s2.min())
+        overall_max = max(s1.max(), s2.max())
+        bins = pd.interval_range(start=overall_min, end=overall_max, periods=n_int)
+        # Conteos por intervalo
+        counts1 = [s1.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
+        counts2 = [s2.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
+        # Etiquetas
         labels = [f"< {bins[0].right:.2f}"] + [f"{iv.left:.2f} - {iv.right:.2f}" for iv in bins[1:]]
+        # Mostrar ambos histogramas
         col_abs, col_rel = st.columns(2)
         with col_abs:
-            st.subheader("Frecuencia absoluta")
+            st.subheader("Frecuencia absoluta (var1 vs var2)")
             fig_abs, ax_abs = plt.subplots(figsize=(4,3))
-            ax_abs.bar(labels, conteos, color=sns.color_palette('tab10', len(labels)))
+            ax_abs.bar(labels, counts1, label=var1)
+            ax_abs.bar(labels, counts2, bottom=counts1, label=var2)
             ax_abs.set_xticklabels(labels, rotation=45, ha='right')
-            ax_abs.set_ylabel('Conteo')
+            ax_abs.set_ylabel('Conteo apilado')
+            ax_abs.legend()
             st.pyplot(fig_abs)
         with col_rel:
-            st.subheader("Frecuencia relativa (%)")
-            rel = [c / sum(conteos) * 100 for c in conteos]
+            st.subheader("Frecuencia relativa (%) apilada")
+            total_counts = [c1+c2 for c1, c2 in zip(counts1, counts2)]
+            rel1 = [c1 / t * 100 if t>0 else 0 for c1, t in zip(counts1, total_counts)]
+            rel2 = [c2 / t * 100 if t>0 else 0 for c2, t in zip(counts2, total_counts)]
             fig_rel, ax_rel = plt.subplots(figsize=(4,3))
-            ax_rel.bar(labels, rel, color=sns.color_palette('tab20', len(labels)))
+            ax_rel.bar(labels, rel1, label=var1)
+            ax_rel.bar(labels, rel2, bottom=rel1, label=var2)
             ax_rel.set_xticklabels(labels, rotation=45, ha='right')
-            ax_rel.set_ylabel('Porcentaje')
+            ax_rel.set_ylabel('Porcentaje apilado')
+            ax_rel.legend()
             st.pyplot(fig_rel)
-        st.markdown("**Resumen de Variable 1 por intervalo:**")
-        df_bins = pd.DataFrame({'Intervalo': labels, 'Conteo': conteos, 'Porcentaje (%)': [f"{p:.1f}" for p in rel]})
-        st.table(df_bins)
-
-    # ---------------------------------------------
-    # Evolución temporal de variables seleccionadas (gráfico de líneas)
-    # ---------------------------------------------
-    st.subheader("📈 Evolución temporal de variables")
-    vars_time = [v for v in vars_correl if v in numeric_cols]
-    sel_time = st.multiselect(
-        "Selecciona variables a graficar en el tiempo:", vars_time
-    )
-    if sel_time:
-        # Preparar datos: index por fecha y ordenar
-        df_time = df[['Date Reported'] + sel_time].dropna(subset=['Date Reported'])
-        df_time = df_time.set_index('Date Reported').sort_index()
-        # Agrupar por día y calcular media
-        df_res = df_time.resample('D').mean()
-        # Graficar líneas con marcadores y grid
-        fig_time, ax_time = plt.subplots(figsize=(8, 4))
-        for col in sel_time:
-            ax_time.plot(
-                df_res.index,
-                df_res[col],
-                marker='o',
-                linewidth=2,
-                label=col
-            )
-        ax_time.set_xlabel('Fecha')
-        ax_time.set_ylabel('Unidades')
-        ax_time.set_title('Evolución temporal')
-        ax_time.grid(True, linestyle='--', alpha=0.6)
-        ax_time.legend(title='Variable', loc='upper right')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        st.pyplot(fig_time)
+        # Gráfico de líneas apiladas
+        st.subheader("📈 Gráfico de líneas apiladas")
+        fig_stack, ax_stack = plt.subplots(figsize=(8,4))
+        x = range(len(labels))
+        ax_stack.stackplot(x, counts1, counts2, labels=[var1, var2], colors=['#3498db','#e74c3c'])
+        ax_stack.set_xticks(x)
+        ax_stack.set_xticklabels(labels, rotation=45, ha='right')
+        ax_stack.set_ylabel('Conteo')
+        ax_stack.set_title(f'Distribución apilada: {var1} & {var2}')
+        ax_stack.legend(loc='upper right')
+        st.pyplot(fig_stack)
 
 except Exception as e:
+    st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
 
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
+
 
