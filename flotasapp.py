@@ -1,5 +1,5 @@
 # flotasapp.py
-# Autor: [Tu Nombre]
+# Autor: [Javier Parada]
 # Fecha de creación: 2025-07-20
 # Descripción: Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
 # Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
