@@ -171,28 +171,39 @@ try:
         for i,p in enumerate(cum3): axb.text(p+2,i,f"{p:.0f}%",va='center')
         st.pyplot(fig)
 
-    # Correlación con heatmap
-    st.markdown(
-        """
-        A continuación se muestra un **heatmap de correlación** para las variables seleccionadas.
-        - Los valores cercanos a **1** indican una correlación positiva alta.
-        - Valores cercanos a **-1** indican una correlación negativa alta.
-        - Un valor de **0** significa que no hay correlación lineal aparente.
-
-        Selecciona cuántas variables quieres analizar y luego elige cada una.
-        """
-    )
-    st.subheader("Correlación variables seleccionadas")
-    n = st.number_input("¿Cuántas variables?",2,len(vars_correl),2)
-    sel = st.multiselect("Variables:",vars_correl,default=vars_correl[:n])
-    if len(sel)==n:
-        corr=df[sel].corr(); fig,ax=plt.subplots(figsize=(4,3))
-        sns.heatmap(corr,annot=True,fmt='.2f',cmap='coolwarm',ax=ax)
-        st.pyplot(fig)
+        # Filtrar variables numéricas válidas para correlación
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    valid_vars = [v for v in vars_correl if v in numeric_cols]
+    if not valid_vars:
+        st.warning("No hay variables numéricas válidas para correlación.")
     else:
-        st.warning(f"Selecciona {n} variables.")
+        st.markdown(
+            """
+            A continuación se muestra un **heatmap de correlación** para las variables seleccionadas.
+            - Los valores cercanos a **1** indican una correlación positiva alta.
+            - Valores cercanos a **-1** indican una correlación negativa alta.
+            - Un valor de **0** significa que no hay correlación lineal aparente.
+
+            Selecciona cuántas variables quieres analizar y luego elige cada una.
+            """
+        )
+        n = st.number_input(
+            "¿Cuántas variables quieres correlacionar?",
+            min_value=2, max_value=len(valid_vars), value=2, step=1
+        )
+        sel = st.multiselect(
+            "Selecciona las variables:", valid_vars,
+            default=valid_vars[:n]
+        )
+        if len(sel) == n:
+            corr = df[sel].corr()
+            fig, ax = plt.subplots(figsize=(4, 3))
+            sns.heatmap(corr, annot=True, fmt='.2f', cmap='coolwarm', ax=ax)
+            ax.set_title('Heatmap de correlación')
+            st.pyplot(fig)
+        else:
+            st.warning(f"Selecciona exactamente {n} variables.")
 
 except Exception as e:
     st.error(f"Error al procesar archivo: {e}")
-
-
+    st.error(f"Error al procesar archivo: {e}")
