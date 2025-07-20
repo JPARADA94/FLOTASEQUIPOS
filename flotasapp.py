@@ -99,15 +99,14 @@ if archivo:
         # ---------------------------------------------
         # Gráficos 6 existentes
         # ---------------------------------------------
-        # Fila 1
+                # Fila 1: Estados y Frecuencia de muestreo
         r1c1, r1c2 = st.columns(2)
-                with r1c1:
+        with r1c1:
             st.subheader("📈 Estados de muestras")
             conteo = df['Report Status'].value_counts()
             orden = ['Normal','Caution','Alert']
             vals = [conteo.get(o,0) for o in orden]
             labels = ['🟢 Normal','🟡 Caution','🔴 Alert']
-            # Colores distintos por barra
             palette1 = sns.color_palette("tab10", len(vals))
             fig1, ax1 = plt.subplots(figsize=(4,3))
             ax1.bar(labels, vals, color=palette1)
@@ -116,11 +115,10 @@ if archivo:
             for i, v in enumerate(vals):
                 ax1.annotate(int(v), (i, v), ha='center', va='bottom')
             st.pyplot(fig1)
-                with r1c2:
+        with r1c2:
             st.subheader("📊 Frec. muestreo: Top 15 equipos")
             top15 = df['Unit ID'].value_counts().head(15)
-            n = len(top15)
-            palette2 = sns.color_palette("viridis", n)
+            palette2 = sns.color_palette("viridis", len(top15))
             fig2, ax2 = plt.subplots(figsize=(4,3))
             ax2.barh(top15.index, top15.values, color=palette2)
             ax2.set_xlabel('Número de muestras')
@@ -129,7 +127,7 @@ if archivo:
                 ax2.annotate(int(v), (v + 0.5, i), va='center')
             st.pyplot(fig2)
 
-        # Fila 2
+        # Fila 2: Intervalos y Pareto Alert
         r2c1, r2c2 = st.columns(2)
                 with r2c1:
             st.subheader("⏱️ Intervalo promedio: Top 15 equipos")
@@ -219,4 +217,5 @@ if archivo:
                     st.pyplot(fig)
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
+
 
