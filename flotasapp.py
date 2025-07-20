@@ -7,10 +7,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import combinations
 
+# ---------------------------------------------
 # Configuración de la página
+# ---------------------------------------------
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 
+# ---------------------------------------------
 # Encabezados esperados en el Excel y mapa de estados
+# ---------------------------------------------
 columnas_esperadas = [
     'B (Boron)', 'Ca (Calcium)', 'Mg (Magnesium)', 'P (Phosphorus)', 'Zn (Zinc)',
     'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
@@ -23,7 +27,18 @@ columnas_esperadas = [
 ]
 status_map = {'*': 'Alert', '+': 'Caution', '': 'Normal'}
 
+# ---------------------------------------------
+# Categorías de variables
+# ---------------------------------------------
+vars_desgaste = ['Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)', 'Mo (Molybdenum)', 'Pb (Lead)', 'PQ Index']
+vars_contaminacion = ['K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)']
+vars_lubricante = ['Oxidation (Ab/cm)', 'TBN (mg KOH/g)', 'Visc@100C (cSt)', 'TAN (mg KOH/g)',
+                   'Fuel Dilut. (Vol%)', 'Nitration (Ab/cm)', 'Particle Count  >4um',
+                   'Particle Count  >6um', 'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)']
+
+# ---------------------------------------------
 # Título e instrucciones
+# ---------------------------------------------
 st.title("📊 Análisis de Flotas de Equipos - Mobil Serv")
 st.markdown(
     """
@@ -33,12 +48,14 @@ st.markdown(
     """
 )
 
+# ---------------------------------------------
 # Carga del archivo
+# ---------------------------------------------
 archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
 
 if archivo:
     try:
-        # Leer y validar columnas básicas
+        # Lectura y validación de columnas básicas
         df = pd.read_excel(archivo)
         falt = sorted(set(columnas_esperadas) - set(df.columns))
         if falt:
@@ -49,14 +66,10 @@ if archivo:
         # Convertir 'Date Reported' a datetime
         df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
 
-        # Detectar y mapear columnas RESULT_
+        # Detectar y mapear columnas RESULT_ a estados
         result_cols = [c for c in df.columns if c.startswith('RESULT_')]
         for col in result_cols:
-            df[col + '_status'] = (
-                df[col].astype(str)
-                     .str.strip()
-                     .map(lambda x: status_map.get(x, 'Normal'))
-            )
+            df[col + '_status'] = df[col].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
 
         # Métricas generales
         total = len(df)
@@ -83,117 +96,115 @@ if archivo:
         )
         st.markdown(texto_resumen)
 
-        # Gráficos en 3 filas x 2 columnas
-        # Fila 1: Estados y Frecuencia de muestreo
+        # ---------------------------------------------
+        # Gráficos 6 existentes
+        # ---------------------------------------------
+        # Fila 1
         r1c1, r1c2 = st.columns(2)
         with r1c1:
             st.subheader("📈 Estados de muestras")
             conteo = df['Report Status'].value_counts()
-            orden = ['Normal', 'Caution', 'Alert']
-            vals = [conteo.get(o, 0) for o in orden]
-            labels = ['🟢 Normal', '🟡 Caution', '🔴 Alert']
-            colors = ['#2ecc71', '#f1c40f', '#e74c3c']
-            fig1, ax1 = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=labels, y=vals, palette=colors, ax=ax1)
+            orden = ['Normal','Caution','Alert']
+            vals = [conteo.get(o,0) for o in orden]
+            fig1, ax1 = plt.subplots(figsize=(4,3))
+            ax1.bar(['🟢 Normal','🟡 Caution','🔴 Alert'], vals)
             ax1.set_ylabel('Cantidad de muestras')
             ax1.spines[['top','right']].set_visible(False)
-            for p in ax1.patches:
-                ax1.annotate(int(p.get_height()), (p.get_x()+p.get_width()/2, p.get_height()), ha='center', va='bottom')
+            for p, lbl in zip(ax1.patches, vals):
+                ax1.annotate(lbl, (p.get_x()+p.get_width()/2, lbl), ha='center', va='bottom')
             st.pyplot(fig1)
         with r1c2:
             st.subheader("📊 Frec. muestreo: Top 15 equipos")
             top15 = df['Unit ID'].value_counts().head(15)
-            fig2, ax2 = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=top15.values, y=top15.index, palette='Blues_r', ax=ax2)
+            fig2, ax2 = plt.subplots(figsize=(4,3))
+            ax2.barh(top15.index, top15.values)
             ax2.set_xlabel('Número de muestras')
             ax2.spines[['top','right']].set_visible(False)
-            for p in ax2.patches:
-                ax2.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
+            for i, v in enumerate(top15.values):
+                ax2.annotate(v, (v+0.5, i), va='center')
             st.pyplot(fig2)
 
-        # Fila 2: Intervalos promedio Top 15 y Pareto Alert
+        # Fila 2
         r2c1, r2c2 = st.columns(2)
         with r2c1:
             st.subheader("⏱️ Intervalo promedio: Top 15 equipos")
             mean_top = mean_int.loc[top15.index].dropna()
-            fig3, ax3 = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=mean_top.values, y=mean_top.index, palette='mako', ax=ax3)
+            fig3, ax3 = plt.subplots(figsize=(4,3))
+            ax3.barh(mean_top.index, mean_top.values)
             ax3.set_xlabel('Días promedio')
             ax3.spines[['top','right']].set_visible(False)
-            for p in ax3.patches:
-                ax3.annotate(f"{p.get_width():.1f}", (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
+            for i, v in enumerate(mean_top.values):
+                ax3.annotate(f"{v:.1f}", (v+0.5, i), va='center')
             st.pyplot(fig3)
         with r2c2:
             st.subheader("📋 Pareto: Alert por parámetro (Top 10)")
-            alert_ser = (
-                pd.Series({col.replace('RESULT_',''): (df[col+'_status']=='Alert').sum() for col in result_cols})
-                  .sort_values(ascending=False)
-                  .head(10)
-            )
-            fig4, ax4 = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=alert_ser.values, y=alert_ser.index, color='#e74c3c', ax=ax4)
+            alert_ser = pd.Series({col.replace('RESULT_',''):(df[col+'_status']=='Alert').sum() for col in result_cols}).sort_values(ascending=False).head(10)
+            fig4, ax4 = plt.subplots(figsize=(4,3))
+            ax4.barh(alert_ser.index, alert_ser.values, color='#e74c3c')
             ax4.set_xlabel('Número de Alert')
             ax4.spines[['top','right']].set_visible(False)
-            for p in ax4.patches:
-                ax4.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
-            # Línea acumulada
-            cum4 = alert_ser.cumsum() / alert_ser.sum() * 100
-            ax4_line = ax4.twiny()
-            ax4_line.plot(cum4.values, cum4.index, '-o', color='#3498db')
-            ax4_line.set_xlabel('Porcentaje acumulado')
-            ax4_line.spines[['top','right']].set_visible(False)
-            for x, y in zip(cum4.values, cum4.index):
-                ax4_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+            for i, v in enumerate(alert_ser.values):
+                ax4.annotate(int(v), (v+0.5, i), va='center')
             st.pyplot(fig4)
 
-        # Fila 3: Pareto Caution y combos Alert
+        # Fila 3
         r3c1, r3c2 = st.columns(2)
         with r3c1:
             st.subheader("📋 Pareto: Caution por parámetro (Top 10)")
-            caution_ser = (
-                pd.Series({col.replace('RESULT_',''): (df[col+'_status']=='Caution').sum() for col in result_cols})
-                  .sort_values(ascending=False)
-                  .head(10)
-            )
-            fig5, ax5 = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=caution_ser.values, y=caution_ser.index, color='#f1c40f', ax=ax5)
+            caution_ser = pd.Series({col.replace('RESULT_',''):(df[col+'_status']=='Caution').sum() for col in result_cols}).sort_values(ascending=False).head(10)
+            fig5, ax5 = plt.subplots(figsize=(4,3))
+            ax5.barh(caution_ser.index, caution_ser.values, color='#f1c40f')
             ax5.set_xlabel('Número de Caution')
             ax5.spines[['top','right']].set_visible(False)
-            for p in ax5.patches:
-                ax5.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
-            cum5 = caution_ser.cumsum() / caution_ser.sum() * 100
-            ax5_line = ax5.twiny()
-            ax5_line.plot(cum5.values, cum5.index, '-o', color='#2c3e50')
-            ax5_line.set_xlabel('Porcentaje acumulado')
-            ax5_line.spines[['top','right']].set_visible(False)
-            for x, y in zip(cum5.values, cum5.index):
-                ax5_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+            for i, v in enumerate(caution_ser.values):
+                ax5.annotate(int(v), (v+0.5, i), va='center')
             st.pyplot(fig5)
         with r3c2:
             st.subheader("🔗 Pareto: combos Alert (Top 10)")
             comb_counts = {}
             for _, row in df.iterrows():
                 alerts = [c.replace('RESULT_','') for c in result_cols if row[c+'_status']=='Alert']
-                if len(alerts) > 1:
-                    for combo in combinations(alerts, 2):
-                        key = ' & '.join(combo)
-                        comb_counts[key] = comb_counts.get(key, 0) + 1
+                if len(alerts)>1:
+                    for combo in combinations(alerts,2):
+                        key=' & '.join(combo)
+                        comb_counts[key]=comb_counts.get(key,0)+1
             comb_ser = pd.Series(comb_counts).sort_values(ascending=False).head(10)
-            fig6, ax6 = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=comb_ser.values, y=comb_ser.index, color='#c0392b', ax=ax6)
+            fig6, ax6 = plt.subplots(figsize=(4,3))
+            ax6.barh(comb_ser.index, comb_ser.values, color='#c0392b')
             ax6.set_xlabel('Número de muestras')
             ax6.spines[['top','right']].set_visible(False)
-            for p in ax6.patches:
-                ax6.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
-            cum6 = comb_ser.cumsum() / comb_ser.sum() * 100
-            ax6_line = ax6.twiny()
-            ax6_line.plot(cum6.values, cum6.index, '-o', color='#16a085')
-            ax6_line.set_xlabel('Porcentaje acumulado')
-            ax6_line.spines[['top','right']].set_visible(False)
-            for x, y in zip(cum6.values, cum6.index):
-                ax6_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+            for i, v in enumerate(comb_ser.values):
+                ax6.annotate(int(v), (v+0.5, i), va='center')
             st.pyplot(fig6)
+
+        # ---------------------------------------------
+        # Nuevos mapas de calor
+        # ---------------------------------------------
+        h1, h2 = st.columns(2)
+        with h1:
+            st.subheader("🌡️ Mapa de calor: Relación de variables")
+            cat1 = st.selectbox("Categoría (Mapa 1)", ["Desgaste","Contaminación","Lubricante"], key="cat1")
+            if cat1=="Desgaste": vars1=vars_desgaste
+            elif cat1=="Contaminación": vars1=vars_contaminacion
+            else: vars1=vars_lubricante
+            x1 = st.selectbox("Variable X", vars1, key="x1")
+            y1 = st.selectbox("Variable Y", vars1, key="y1")
+            corr1 = df[[x1,y1]].corr()
+            fig7, ax7 = plt.subplots(figsize=(4,3))
+            sns.heatmap(corr1, annot=True, fmt=".2f", ax=ax7)
+            st.pyplot(fig7)
+        with h2:
+            st.subheader("🌡️ Mapa de calor: Relación de variables")
+            cat2 = st.selectbox("Categoría (Mapa 2)", ["Desgaste","Contaminación","Lubricante"], key="cat2")
+            if cat2=="Desgaste": vars2=vars_desgaste
+            elif cat2=="Contaminación": vars2=vars_contaminacion
+            else: vars2=vars_lubricante
+            x2 = st.selectbox("Variable X", vars2, key="x2")
+            y2 = st.selectbox("Variable Y", vars2, key="y2")
+            corr2 = df[[x2,y2]].corr()
+            fig8, ax8 = plt.subplots(figsize=(4,3))
+            sns.heatmap(corr2, annot=True, fmt=".2f", ax=ax8)
+            st.pyplot(fig8)
 
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
-
