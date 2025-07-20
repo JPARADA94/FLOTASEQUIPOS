@@ -29,16 +29,19 @@ columnas_esperadas = [
 ]
 
 # Columnas de desgaste
-columnas_desgaste = ['Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)', 'Mo (Molybdenum)', 'Pb (Lead)', 'PQ Index']
+columnas_desgaste = [
+    'Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)',
+    'Mo (Molybdenum)', 'Pb (Lead)', 'PQ Index'
+]
 
 # ---------------------------------------------
 # 4. TÍTULO Y DESCRIPCIÓN
 # ---------------------------------------------
 st.title("📊 Análisis de Datos de Flotas de Equipos - Mobil Serv")
 st.markdown("""
-Esta aplicación permite analizar datos históricos de flotas específicas de equipos.
+Esta aplicación analiza datos históricos de flotas específicas.
 
-✅ **Importante:** el archivo Excel debe estar filtrado (por ejemplo, sólo un modelo) y usar formato **Mobil Serv**.
+✅ **Importante:** el archivo Excel debe estar filtrado (un solo modelo) y usar formato **Mobil Serv**.
 """)
 
 # ---------------------------------------------
@@ -55,21 +58,28 @@ if archivo:
         cols = set(df.columns.astype(str))
         req = set(columnas_esperadas)
 
-        if req.issubset(cols):
-            # Métricas generales
-            total_muestras = len(df)
-            unique_lub = df['Tested Lubricant'].nunique()
-            lubs = df['Tested Lubricant'].unique().tolist()
-            unique_ops = df['Account Name'].nunique()
-            ops = df['Account Name'].unique().tolist()
-            df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
-            fecha_min = df['Date Reported'].min().date()
-            fecha_max = df['Date Reported'].max().date()
-            equipos = df['Unit ID'].nunique()
+        # Validar formato Mobil Serv
+        if not req.issubset(cols):
+            faltantes = sorted(req - cols)
+            st.error("❌ Archivo inválido: faltan columnas:")
+            st.code("\n".join(faltantes))
+            st.info("Asegúrate de usar el formato Mobil Serv completo.")
+            st.stop()
 
-            # Mostrar resumen
-            st.subheader("🔎 Resumen general de los datos")
-            st.markdown(f"""
+        # Convertir fecha y métricas básicas
+        df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
+        total_muestras = len(df)
+        unique_lub = df['Tested Lubricant'].nunique()
+        lubs = df['Tested Lubricant'].unique().tolist()
+        unique_ops = df['Account Name'].nunique()
+        ops = df['Account Name'].unique().tolist()
+        fecha_min = df['Date Reported'].min().date()
+        fecha_max = df['Date Reported'].max().date()
+        equipos = df['Unit ID'].nunique()
+
+        # Resumen general
+        st.subheader("🔎 Resumen general de los datos")
+        st.markdown(f"""
 - **Total de muestras:** {total_muestras}
 - **Lubricantes analizados:** {unique_lub}
 - **Operaciones:** {unique_ops}
@@ -77,72 +87,71 @@ if archivo:
 - **Equipos analizados:** {equipos}
 """)
 
-            # Detalles en desplegables
-            with st.expander("📦 Lista de lubricantes"):
-                for lub in lubs:
-                    st.write(f"• {lub}")
-            with st.expander("🚩 Lista de operaciones"):
-                for op in ops:
-                    st.write(f"• {op}")
+        # Detalles en expanders
+        with st.expander("📦 Lista de lubricantes"):
+            for lub in lubs:
+                st.write(f"• {lub}")
+        with st.expander("🚩 Lista de operaciones"):
+            for op in ops:
+                st.write(f"• {op}")
 
-            # Validación de columnas de desgaste
-            for col in columnas_desgaste:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col].fillna(0), errors='coerce')
+        # Preprocesar columnas de desgaste
+        for col in columnas_desgaste:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col].fillna(0), errors='coerce')
 
-            # Columnas con pocos datos
-            invalidas = [(c, df[c].notna().sum()) for c in df.columns if df[c].notna().sum() < 5]
-            if invalidas:
-                with st.expander("📋 Columnas ignoradas (datos insuficientes)"):
-                    for c, n in invalidas:
-                        st.write(f"• {c}: {n} datos válidos")
+        # Columnas con datos insuficientes
+        invalidas = [(c, df[c].notna().sum()) for c in df.columns if df[c].notna().sum() < 5]
+        if invalidas:
+            with st.expander("📋 Columnas ignoradas (datos insuficientes)"):
+                for c, n in invalidas:
+                    st.write(f"• {c}: {n} datos válidos")
 
-            # ---------------------------------------------
-            # 7. GRÁFICO 1: DISTRIBUCIÓN DE ESTADOS
-            # ---------------------------------------------
-            st.subheader("📈 Distribución por estado de las muestras")
+        # ---------------------------------------------
+        # 7. GRÁFICOS EN UNA SOLA FILA
+        # ---------------------------------------------
+        col1, col2 = st.columns(2)
+
+        # Gráfico 1: Distribución de estados
+        with col1:
+            st.subheader("📈 Distribución por estado")
             conteo = df['Report Status'].value_counts()
-            estados = list(conteo.index)
-            labels = {'Normal':'🟢 Normal','Precaution':'🟡 Precaución','Abnormal':'🔴 Alerta'}
-            display = [labels.get(e,e) for e in estados]
+            labels_map = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
+            display = [labels_map.get(e, e) for e in conteo.index]
             valores = conteo.values
+            palette = ['#2ecc71', '#f1c40f', '#e74c3c']
 
-            fig, ax = plt.subplots(figsize=(4,3))
-            sns.barplot(x=display, y=valores, ax=ax)
-            ax.set_title("Estados de muestras", fontsize=12)
+            fig, ax = plt.subplots(figsize=(4, 3))
+            sns.barplot(x=display, y=valores, palette=palette[:len(display)], ax=ax)
             ax.set_ylabel("Cantidad")
             ax.set_xlabel("")
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
-            # Anotar valores
             for p in ax.patches:
-                ax.annotate(int(p.get_height()), (p.get_x()+p.get_width()/2, p.get_height()),
+                ax.annotate(int(p.get_height()),
+                            (p.get_x() + p.get_width() / 2, p.get_height()),
                             ha='center', va='bottom', fontsize=10)
             st.pyplot(fig)
+            st.markdown("""
+🔍 **Nota**: Prioriza acciones sobre muestras en 🟡 Precaución y 🔴 Alerta.
+""")
 
-            # ---------------------------------------------
-            # 8. GRÁFICO 2: FRECUENCIA DE MUESTREO POR EQUIPO
-            # ---------------------------------------------
-            st.subheader("📊 Frecuencia de muestreo: Top 20 equipos")
-            counts = df['Unit ID'].value_counts().head(20)
-            fig2, ax2 = plt.subplots(figsize=(5,4))
-            sns.barplot(x=counts.values, y=counts.index, ax=ax2, orient='h')
-            ax2.set_title("Top 20 equipos por número de muestras", fontsize=12)
+        # Gráfico 2: Frecuencia top 15 equipos
+        with col2:
+            st.subheader("📊 Frecuencia de muestreo: Top 15")
+            top_counts = df['Unit ID'].value_counts().head(15)
+            fig2, ax2 = plt.subplots(figsize=(4, 3.5))
+            sns.barplot(x=top_counts.values, y=top_counts.index, palette='Blues_r', ax=ax2)
             ax2.set_xlabel("Número de muestras")
             ax2.set_ylabel("")
-            # Etiquetas horizontales
-            for p in ax2.patches:
-                ax2.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2),
-                             va='center', fontsize=9)
             ax2.spines['top'].set_visible(False)
             ax2.spines['right'].set_visible(False)
+            for p in ax2.patches:
+                ax2.annotate(int(p.get_width()),
+                             (p.get_width() + 0.5, p.get_y() + p.get_height() / 2),
+                             va='center', fontsize=9)
             st.pyplot(fig2)
-
-        else:
-            faltantes = req - cols
-            st.error("❌ Archivo inválido: faltan columnas:")
-            st.code("\n".join(sorted(faltantes)))
-            st.info("Asegúrate de usar el formato Mobil Serv completo.")
 
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
+
