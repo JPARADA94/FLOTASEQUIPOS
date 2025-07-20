@@ -197,9 +197,23 @@ try:
         )
         if len(sel) == n:
             corr = df[sel].corr()
-            fig, ax = plt.subplots(figsize=(4, 3))
-            sns.heatmap(corr, annot=True, fmt='.2f', cmap='coolwarm', ax=ax)
-            ax.set_title('Heatmap de correlación')
+            # Ajuste dinámico de tamaño de figura y fuente para mejor legibilidad
+            size = max(4, n * 0.6)
+            annot_font = max(6, int(12 - n / 2))
+            fig, ax = plt.subplots(figsize=(size, size))
+            sns.heatmap(
+                corr,
+                annot=True,
+                fmt='.2f',
+                cmap='coolwarm',
+                annot_kws={'fontsize': annot_font},
+                linewidths=0.5,
+                square=True,
+                ax=ax
+            )
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=annot_font)
+            ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=annot_font)
+            ax.set_title('Heatmap de correlación', fontsize=annot_font+2)
             st.pyplot(fig)
         else:
             st.warning(f"Selecciona exactamente {n} variables.")
