@@ -44,6 +44,7 @@ vars_correl = [
 st.title("📊 Análisis de Flotas - Mobil Serv")
 st.markdown(
     """
+    Autor: Javier Parada - Ingeniero de soporte en campo
     Esta aplicación permite analizar datos históricos de flotas.
     ✅ **Importante:** el archivo Excel debe estar filtrado (un único tipo de equipo) y seguir el formato **Mobil Serv**.
     """
