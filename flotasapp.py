@@ -112,8 +112,24 @@ try:
 - Intervalo medio de muestreo: **{overall_mean:.1f}** días
 """)
 
+        # ---------------------------------------------
+    # Opción de filtrado de equipos
+    # ---------------------------------------------
+    st.markdown("### Filtrado de equipos a analizar")
+    unidades = df['Unit ID'].unique().tolist()
+    modo = st.radio(
+        "¿Deseas analizar todos los equipos o excluir algunos?", 
+        ("Todos","Excluir algunos"),
+        horizontal=True
+    )
+    if modo == "Excluir algunos":
+        excl = st.multiselect("Selecciona equipos a excluir:", unidades)
+        if excl:
+            df = df[~df['Unit ID'].isin(excl)]
+    
     # ---------------------------------------------
     # Gráficos fijos (3 filas x 2 columnas)
+    # --------------------------------------------- (3 filas x 2 columnas)
     # ---------------------------------------------
     # Fila 1: Estados y frecuencia
     c1, c2 = st.columns(2)
@@ -335,5 +351,4 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
-
 
