@@ -93,65 +93,66 @@ if archivo:
                 for c, n in invalidas:
                     st.write(f"• {c}: {n} datos válidos")
 
-        # Configurar columnas para gráficos
+        # Preparar diseño de grillas
         col1, col2 = st.columns(2)
 
-        # Gráfico 1: Distribución de estados corregida
+        # 1. Gráfico: Distribución de Report Status
         with col1:
-            st.subheader("📈 Estados de muestras")
-            estados_orden = ['Normal', 'Precaution', 'Abnormal']
-            conteo = df['Report Status'].value_counts().reindex(estados_orden, fill_value=0)
-            etiquetas = ['🟢 Normal', '🟡 Precaución', '🔴 Alerta']
+            st.subheader("📈 Estados de muestras (Report Status)")
+            conteo = df['Report Status'].value_counts()
+            # Etiquetas y colores dinámicos
+            labels_map = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
+            display = [labels_map.get(lbl, lbl) for lbl in conteo.index]
             valores = conteo.values
-            fig, ax = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=etiquetas, y=valores, palette=['#2ecc71', '#f1c40f', '#e74c3c'], ax=ax)
-            ax.set_ylabel("Cantidad")
+            colors = [('#2ecc71' if lbl=='Normal' else '#f1c40f' if lbl=='Precaution' else '#e74c3c') for lbl in conteo.index]
+
+            fig, ax = plt.subplots(figsize=(4,3))
+            sns.barplot(x=display, y=valores, palette=colors, ax=ax)
+            ax.set_ylabel("Cantidad de muestras")
             ax.set_xlabel("")
-            ax.spines[['top', 'right']].set_visible(False)
+            ax.spines[['top','right']].set_visible(False)
             for p in ax.patches:
                 ax.annotate(int(p.get_height()),
-                            (p.get_x() + p.get_width()/2, p.get_height()),
+                            (p.get_x()+p.get_width()/2, p.get_height()),
                             ha='center', va='bottom')
             st.pyplot(fig)
             st.markdown("🔍 Prioriza acciones en 🟡 Precaución y 🔴 Alerta.")
 
-        # Gráfico 2: Frecuencia de muestreo top 15
+        # 2. Gráfico: Frecuencia de muestreo top 15
         with col2:
             n_top = min(15, df['Unit ID'].nunique())
             st.subheader(f"📊 Muestreos: Top {n_top} equipos")
             top_counts = df['Unit ID'].value_counts().head(n_top)
-            fig2, ax2 = plt.subplots(figsize=(4, 3))
+            fig2, ax2 = plt.subplots(figsize=(4,3))
             sns.barplot(x=top_counts.values, y=top_counts.index, palette='Blues_r', ax=ax2)
             ax2.set_xlabel("Número de muestras")
             ax2.set_ylabel("")
-            ax2.spines[['top', 'right']].set_visible(False)
+            ax2.spines[['top','right']].set_visible(False)
             for p in ax2.patches:
                 ax2.annotate(int(p.get_width()),
                              (p.get_width()+0.5, p.get_y()+p.get_height()/2),
                              va='center')
             st.pyplot(fig2)
 
-        # Gráfico 3: Intervalos promedio de muestreo Top 15
+        # 3. Intervalo promedio de muestreo Top 15
         st.subheader("⏱️ Intervalo promedio de muestreo - Top 15 equipos")
-        # Calcular promedio de días entre muestras por equipo
-        df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
+        df_sorted = df.sort_values(['Unit ID','Date Reported'])
         mean_intervals = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
-        top_units = df['Unit ID'].value_counts().head(15).index
+        top_units = top_counts.index
         mean_top = mean_intervals.loc[top_units].dropna()
-        # Gráfico
-        fig3, ax3 = plt.subplots(figsize=(6, 3))
+        fig3, ax3 = plt.subplots(figsize=(6,3))
         sns.barplot(x=mean_top.values, y=mean_top.index, palette='mako', ax=ax3)
         ax3.set_xlabel('Días promedio')
         ax3.set_ylabel('Unit ID')
-        ax3.spines[['top', 'right']].set_visible(False)
+        ax3.spines[['top','right']].set_visible(False)
         for p in ax3.patches:
             ax3.annotate(f"{p.get_width():.1f}",
                          (p.get_width()+0.5, p.get_y()+p.get_height()/2),
                          va='center')
         st.pyplot(fig3)
 
-        # Mostrar promedio global
-        overall_mean = mean_intervals.mean()
+        # Promedio global de muestreo
+overall_mean = mean_intervals.mean()
         st.markdown(f"**Intervalo medio de muestreo de toda la flota:** {overall_mean:.1f} días")
 
     except Exception as e:
