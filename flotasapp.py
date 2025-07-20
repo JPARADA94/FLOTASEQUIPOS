@@ -45,6 +45,13 @@ vars_correl = [
 # Título e instrucciones
 # ---------------------------------------------
 st.title("📊 Análisis de Flotas - Mobil Serv")
+# Mostrar información de autor
+st.markdown(
+    """
+    **Autor:** Tu Nombre  \
+    **Fecha de creación:** 2025-07-20
+    """
+)
 st.markdown(
     """
     Esta aplicación permite analizar datos históricos de flotas.
@@ -346,4 +353,3 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
-
