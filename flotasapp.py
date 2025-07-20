@@ -65,16 +65,21 @@ if archivo:
         equipos = df['Unit ID'].nunique()
 
         st.subheader("🔎 Resumen general")
-        st.markdown(
+        texto_resumen = (
             f"- Total muestras: **{total}**  
-            - Lubricantes distintos: **{lubs}**  
-            - Operaciones distintas: **{ops}**  
-            - Rango fechas: **{fecha_min}** a **{fecha_max}**  
-            - Equipos distintos: **{equipos}**"
+"
+            f"- Lubricantes distintos: **{lubs}**  
+"
+            f"- Operaciones distintas: **{ops}**  
+"
+            f"- Rango fechas: **{fecha_min}** a **{fecha_max}**  
+"
+            f"- Equipos distintos: **{equipos}**"
         )
+        st.markdown(texto_resumen)
 
         # Fila 1: Estados y Frecuencia
-        r1c1, r1c2 = st.columns(2)
+        r1c1, r1c2 = st.columns(2), r1c2 = st.columns(2)
         with r1c1:
             st.subheader("📈 Estados de muestras")
             conteo = df['Report Status'].value_counts()
@@ -196,3 +201,4 @@ if archivo:
 
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
+
