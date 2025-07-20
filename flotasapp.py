@@ -108,50 +108,104 @@ if archivo:
                     st.write(f"• {c}: {n} datos válidos")
 
         # ---------------------------------------------
-        # 7. GRÁFICOS EN UNA SOLA FILA
-        # ---------------------------------------------
-        col1, col2 = st.columns(2)
+# 7. GRÁFICOS EN UNA SOLA FILA
+# ---------------------------------------------
+col1, col2 = st.columns(2)
 
-        # Gráfico 1: Distribución de estados
-        with col1:
-            st.subheader("📈 Distribución por estado")
-            conteo = df['Report Status'].value_counts()
-            labels_map = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
-            display = [labels_map.get(e, e) for e in conteo.index]
-            valores = conteo.values
-            palette = ['#2ecc71', '#f1c40f', '#e74c3c']
+# Gráfico 1: Distribución de estados
+with col1:
+    st.subheader("📈 Distribución por estado")
+    conteo = df['Report Status'].value_counts()
+    labels_map = {'Normal': '🟢 Normal', 'Precaution': '🟡 Precaución', 'Abnormal': '🔴 Alerta'}
+    display = [labels_map.get(e, e) for e in conteo.index]
+    valores = conteo.values
+    palette = ['#2ecc71', '#f1c40f', '#e74c3c']  # verde, amarillo, rojo
 
-            fig, ax = plt.subplots(figsize=(4, 3))
-            sns.barplot(x=display, y=valores, palette=palette[:len(display)], ax=ax)
-            ax.set_ylabel("Cantidad")
-            ax.set_xlabel("")
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            for p in ax.patches:
-                ax.annotate(int(p.get_height()),
-                            (p.get_x() + p.get_width() / 2, p.get_height()),
-                            ha='center', va='bottom', fontsize=10)
-            st.pyplot(fig)
-            st.markdown("""
-🔍 **Nota**: Prioriza acciones sobre muestras en 🟡 Precaución y 🔴 Alerta.
+    fig, ax = plt.subplots(figsize=(4, 3))
+    sns.barplot(x=display, y=valores, palette=palette[:len(display)], ax=ax)
+    ax.set_ylabel("Cantidad")
+    ax.set_xlabel("")
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    for p in ax.patches:
+        ax.annotate(int(p.get_height()),
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='bottom', fontsize=10)
+    st.pyplot(fig)
+    st.markdown("""
+🔍 **Nota**: Prioriza acciones en 🟡 Precaución y 🔴 Alerta.
 """)
 
-        # Gráfico 2: Frecuencia top 15 equipos
-        with col2:
-            st.subheader("📊 Frecuencia de muestreo: Top 15")
-            top_counts = df['Unit ID'].value_counts().head(15)
-            fig2, ax2 = plt.subplots(figsize=(4, 3.5))
-            sns.barplot(x=top_counts.values, y=top_counts.index, palette='Blues_r', ax=ax2)
-            ax2.set_xlabel("Número de muestras")
-            ax2.set_ylabel("")
-            ax2.spines['top'].set_visible(False)
-            ax2.spines['right'].set_visible(False)
-            for p in ax2.patches:
-                ax2.annotate(int(p.get_width()),
-                             (p.get_width() + 0.5, p.get_y() + p.get_height() / 2),
-                             va='center', fontsize=9)
-            st.pyplot(fig2)
+# Gráfico 2: Frecuencia top N equipos
+with col2:
+    # Determinar cuántos equipos mostrar (hasta 15)
+    n_top = min(15, df['Unit ID'].nunique())
+    st.subheader(f"📊 Frecuencia de muestreo: Top {n_top} equipos")
+    top_counts = df['Unit ID'].value_counts().head(n_top)
+    fig2, ax2 = plt.subplots(figsize=(4, 3.5))
+    sns.barplot(x=top_counts.values, y=top_counts.index, palette='Blues_r', ax=ax2)
+    ax2.set_xlabel("Número de muestras")
+    ax2.set_ylabel("")
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    for p in ax2.patches:
+        ax2.annotate(int(p.get_width()),
+                     (p.get_width() + 0.5, p.get_y() + p.get_height() / 2),
+                     va='center', fontsize=9)
+    st.pyplot(fig2)
 
-    except Exception as e:
-        st.error(f"❌ Error al procesar archivo: {e}")
+# ---------------------------------------------
+# 8. INTERVALOS DE MUESTREO
+# ---------------------------------------------
+st.subheader("⏱️ Intervalos de muestreo")
+# Calcular diferencias de días entre muestras por equipo
+df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
+intervals = df_sorted.groupby('Unit ID')['Date Reported'].diff().dt.days.dropna()
+
+if not intervals.empty:
+    fig3, ax3 = plt.subplots(figsize=(6, 3))
+    sns.histplot(intervals, bins=20, kde=False, ax=ax3)
+    ax3.set_xlabel('Días entre muestras')
+    ax3.set_ylabel('Frecuencia')
+    ax3.spines['top'].set_visible(False)
+    ax3.spines['right'].set_visible(False)
+    st.pyplot(fig3)
+else:
+    st.info("No hay suficientes datos de fecha para calcular intervalos.")
+
+# ---------------------------------------------
+# 9. PARETO DE ALERTAS Y PRECAUCIÓN POR EQUIPO
+# ---------------------------------------------
+st.subheader("📋 Pareto de muestras en Precaución y Alerta por equipo")
+# Filtrar muestras en estado Precaución o Alerta
+df_pareto = df[df['Report Status'].isin(['Precaution', 'Abnormal'])]
+pareto_counts = df_pareto['Unit ID'].value_counts()
+# Calcular porcentaje acumulado
+cumperc = pareto_counts.cumsum() / pareto_counts.sum() * 100
+
+fig4, ax4 = plt.subplots(figsize=(6, 3.5))
+# Barras
+sns.barplot(x=pareto_counts.values, y=pareto_counts.index, color='#e74c3c', ax=ax4)
+# Línea de acumulado
+ax4_line = ax4.twiny()
+ax4_line.plot(cumperc.values, cumperc.index, '-o', color='#3498db')
+ax4_line.set_xlabel('Porcentaje acumulado')
+
+# Etiquetas y estilo
+ax4.set_xlabel('Número de muestras')
+ax4.set_ylabel('Unit ID')
+ax4.spines['top'].set_visible(False)
+ax4.spines['right'].set_visible(False)
+ax4_line.spines['top'].set_visible(False)
+ax4_line.spines['right'].set_visible(False)
+
+# Anotar valores en barras y acumulado
+for p in ax4.patches:
+    ax4.annotate(int(p.get_width()),
+                 (p.get_width() + 0.5, p.get_y() + p.get_height() / 2),
+                 va='center', fontsize=9)
+for x, y in zip(cumperc.values, cumperc.index):
+    ax4_line.annotate(f"{x:.0f}%", (x, y), textcoords="offset points", xytext=(5,-5), fontsize=8)
+
+st.pyplot(fig4)
 
