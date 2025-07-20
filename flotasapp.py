@@ -113,3 +113,4 @@ if archivo:
     except Exception as e:
         st.error(f"❌ Error al procesar el archivo: {str(e)}")
 
+
