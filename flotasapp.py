@@ -27,7 +27,7 @@ columnas_desgaste = [
     'Mo (Molybdenum)', 'Pb (Lead)', 'PQ Index'
 ]
 
-# Título e instrucciones iniciales
+# Título e instrucciones
 st.title("📊 Análisis de Flotas de Equipos - Mobil Serv")
 st.markdown(
     """
@@ -44,14 +44,13 @@ if archivo:
     try:
         # Lectura y validación de columnas
         df = pd.read_excel(archivo)
-        cols = set(df.columns.astype(str))
-        if not set(columnas_esperadas).issubset(cols):
-            faltantes = sorted(set(columnas_esperadas) - cols)
+        if not set(columnas_esperadas).issubset(df.columns):
+            faltantes = sorted(set(columnas_esperadas) - set(df.columns))
             st.error("❌ Archivo inválido: faltan columnas:")
             st.code("\n".join(faltantes))
             st.stop()
 
-        # Convertir fecha
+        # Convertir fechas
         df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
 
         # Métricas generales
@@ -64,7 +63,7 @@ if archivo:
         fecha_max = df['Date Reported'].max().date()
         equipos = df['Unit ID'].nunique()
 
-        # Mostrar resumen
+        # Resumen general
         st.subheader("🔎 Resumen general de los datos")
         st.markdown(f"""
 - **Total de muestras:** {total_muestras}
@@ -93,17 +92,16 @@ if archivo:
                 for c, n in invalidas:
                     st.write(f"• {c}: {n} datos válidos")
 
-        # Gráficos en una sola fila
+        # Gráficos en dos columnas
         col1, col2 = st.columns(2)
 
-        # Gráfico 1: Distribución de Report Status
+        # 1. Distribución de Report Status
         with col1:
             st.subheader("📈 Estados de muestras (Report Status)")
             conteo = df['Report Status'].value_counts()
-            # Asegurar orden: Normal, Precaution, Abnormal
-            estados = ['Normal', 'Precaution', 'Abnormal']
+            estados = ['Normal', 'Caution', 'Alert']
             valores = [conteo.get(e, 0) for e in estados]
-            etiquetas = ['🟢 Normal', '🟡 Precaución', '🔴 Alerta']
+            etiquetas = ['🟢 Normal', '🟡 Caution', '🔴 Alert']
             colores = ['#2ecc71', '#f1c40f', '#e74c3c']
 
             fig, ax = plt.subplots(figsize=(4, 3))
@@ -113,12 +111,12 @@ if archivo:
             ax.spines[['top','right']].set_visible(False)
             for p in ax.patches:
                 ax.annotate(int(p.get_height()),
-                            (p.get_x()+p.get_width()/2, p.get_height()),
+                            (p.get_x() + p.get_width()/2, p.get_height()),
                             ha='center', va='bottom')
             st.pyplot(fig)
-            st.markdown("🔍 Prioriza acciones en 🟡 Precaución y 🔴 Alerta.")
+            st.markdown("🔍 Prioriza acciones en 🟡 Caution y 🔴 Alert.")
 
-        # Gráfico 2: Frecuencia de muestreo top 15
+        # 2. Frecuencia de muestreo top 15 equipos
         with col2:
             n_top = min(15, df['Unit ID'].nunique())
             st.subheader(f"📊 Muestreos: Top {n_top} equipos")
@@ -130,24 +128,24 @@ if archivo:
             ax2.spines[['top','right']].set_visible(False)
             for p in ax2.patches:
                 ax2.annotate(int(p.get_width()),
-                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                             (p.get_width() + 0.5, p.get_y() + p.get_height()/2),
                              va='center')
             st.pyplot(fig2)
 
-        # Gráfico 3: Intervalo promedio de muestreo Top 15
+        # 3. Intervalo promedio de muestreo Top 15 equipos
         st.subheader("⏱️ Intervalo promedio de muestreo - Top 15 equipos")
-        df_sorted = df.sort_values(['Unit ID','Date Reported'])
+        df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
         mean_intervals = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
-        top_units = top_counts.index
+        top_units = df['Unit ID'].value_counts().head(15).index
         mean_top = mean_intervals.loc[top_units].dropna()
         fig3, ax3 = plt.subplots(figsize=(6, 3))
         sns.barplot(x=mean_top.values, y=mean_top.index, palette='mako', ax=ax3)
-        ax3.set_xlabel('Días promedio')
-        ax3.set_ylabel('Unit ID')
+        ax3.set_xlabel("Días promedio")
+        ax3.set_ylabel("Unit ID")
         ax3.spines[['top','right']].set_visible(False)
         for p in ax3.patches:
             ax3.annotate(f"{p.get_width():.1f}",
-                         (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                         (p.get_width() + 0.5, p.get_y() + p.get_height()/2),
                          va='center')
         st.pyplot(fig3)
 
