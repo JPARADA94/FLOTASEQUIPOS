@@ -111,6 +111,36 @@ try:
         ax.set_ylabel('Cant. muestras')
         for i,v in enumerate(vals): ax.text(i,v+2,str(v),ha='center')
         st.pyplot(fig)
+
+    # ---------------------------------------------
+    # Histogramas por variable
+    # ---------------------------------------------
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    vars_hist = [v for v in vars_correl if v in numeric_cols]
+    st.subheader("🔢 Distribución de variable")
+    var_hist = st.selectbox("Variable:", vars_hist, key="var_hist")
+    bins = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=10, step=1, key="bins")
+    if var_hist:
+        series = df[var_hist].dropna()
+        grouped = pd.cut(series, bins=bins)
+        freq = series.groupby(grouped).size()
+        labels = [f"{interval.left:.2f}-{interval.right:.2f}" for interval in freq.index]
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Frecuencia absoluta")
+            fig_h1, ax_h1 = plt.subplots(figsize=(4, 3))
+            ax_h1.bar(labels, freq.values, color=sns.color_palette('tab10', len(labels)))
+            ax_h1.set_xticklabels(labels, rotation=45, ha='right')
+            ax_h1.set_ylabel("Conteo")
+            st.pyplot(fig_h1)
+        with col2:
+            st.subheader("Frecuencia relativa (%)")
+            rel = freq.values / freq.values.sum() * 100
+            fig_h2, ax_h2 = plt.subplots(figsize=(4, 3))
+            ax_h2.bar(labels, rel, color=sns.color_palette('tab20', len(labels)))
+            ax_h2.set_xticklabels(labels, rotation=45, ha='right')
+            ax_h2.set_ylabel("Porcentaje")
+            st.pyplot(fig_h2)
     with c2:
         st.subheader("Frecuencia muestreo (Top15)")
         top15 = df['Unit ID'].value_counts().head(15)
@@ -231,5 +261,6 @@ try:
 except Exception as e:
     st.error(f"Error al procesar archivo: {e}")
     st.error(f"Error al procesar archivo: {e}")
+
 
 
