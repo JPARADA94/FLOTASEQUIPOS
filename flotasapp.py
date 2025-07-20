@@ -7,10 +7,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import combinations
 
-# Configuración de página
+# ---------------------------------------------
+# Configuración de la página
+# ---------------------------------------------
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 
+# ---------------------------------------------
 # Encabezados esperados y mapeo de estados
+# ---------------------------------------------
 columnas_esperadas = [
     'B (Boron)', 'Ca (Calcium)', 'Mg (Magnesium)', 'P (Phosphorus)', 'Zn (Zinc)',
     'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
@@ -23,7 +27,9 @@ columnas_esperadas = [
 ]
 status_map = {'*': 'Alert', '+': 'Caution', '': 'Normal'}
 
-# Variables para correlación
+# ---------------------------------------------
+# Variables disponibles para correlación e intervalos
+# ---------------------------------------------
 vars_correl = [
     'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
     'Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)', 'Mo (Molybdenum)',
@@ -32,34 +38,41 @@ vars_correl = [
     'Particle Count  >6um', 'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)'
 ]
 
-# Título
+# ---------------------------------------------
+# Título e instrucciones
+# ---------------------------------------------
 st.title("📊 Análisis de Flotas - Mobil Serv")
 st.markdown(
     """
-    Esta app analiza datos de flotas por proyecto.   
-    ✅ Sube un Excel filtrado y en formato Mobil Serv.
+    Esta aplicación permite analizar datos históricos de flotas.
+    ✅ **Importante:** el archivo Excel debe estar filtrado (un único tipo de equipo) y seguir el formato **Mobil Serv**.
     """
 )
 
-# Carga de archivo
-archivo = st.file_uploader("Sube tu Excel (.xlsx)", type=["xlsx"])
+# ---------------------------------------------
+# Carga del archivo
+# ---------------------------------------------
+archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
 if not archivo:
+    st.info("Espera a subir un archivo para comenzar el análisis.")
     st.stop()
 
-# Procesamiento
+# ---------------------------------------------
+# Procesamiento principal
+# ---------------------------------------------
 try:
+    # Leer y validar columnas
     df = pd.read_excel(archivo)
     falt = sorted(set(columnas_esperadas) - set(df.columns))
     if falt:
-        st.error("Faltan columnas:")
+        st.error("❌ Faltan columnas en el archivo:")
         st.code("\n".join(falt))
         st.stop()
 
-    # Fechas
+    # Convertir fechas
     df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
 
-    # ---------------------------------------------
-    # Limpiar y convertir a numérico columnas de variables de correlación
+    # Limpieza y conversión a numérico de variables de análisis
     for col in vars_correl:
         if col in df.columns:
             df[col] = pd.to_numeric(
@@ -68,179 +81,142 @@ try:
                 errors='coerce'
             )
 
-    # Mapear RESULT_ a estados
+    # Mapear columnas RESULT_ a estados
     result_cols = [c for c in df.columns if c.startswith('RESULT_')]
     for c in result_cols:
-        df[c+'_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x,'Normal'))
+        df[c + '_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
 
-    # Métricas
+    # Cálculo de métricas generales
     total = len(df)
     lubs = df['Tested Lubricant'].nunique()
     ops = df['Account Name'].nunique()
     fecha_min = df['Date Reported'].min().date()
     fecha_max = df['Date Reported'].max().date()
     equipos = df['Unit ID'].nunique()
-
-    # Intervalos
-    df_s = df.sort_values(['Unit ID','Date Reported'])
-    mean_int = df_s.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
+    
+    # Intervalo medio global
+    df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
+    mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
     overall_mean = mean_int.mean()
 
-    # Resumen
-    st.subheader("🔎 Resumen")
+    # ---------------------------------------------
+    # Resumen general
+    # ---------------------------------------------
+    st.subheader("🔎 Resumen general")
     st.markdown(f"""
 - Total muestras: **{total}**  
-- Lubricantes: **{lubs}**  
-- Operaciones: **{ops}**  
-- Fechas: {fecha_min} a {fecha_max}  
-- Equipos: **{equipos}**  
-- Intervalo medio: **{overall_mean:.1f}** días
+- Lubricantes distintos: **{lubs}**  
+- Operaciones distintas: **{ops}**  
+- Rango de fechas: **{fecha_min}** a **{fecha_max}**  
+- Equipos distintos: **{equipos}**  
+- Intervalo medio de muestreo: **{overall_mean:.1f}** días
 """)
 
-    # 6 Gráficos
-    # Fila1: Estados + Frecuencia
+    # ---------------------------------------------
+    # Gráficos fijos (3 filas x 2 columnas)
+    # ---------------------------------------------
+    # Fila 1: Estados y frecuencia
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Estados de muestras")
+        st.subheader("📈 Estados de muestras")
         vc = df['Report Status'].value_counts()
-        ords = ['Normal','Caution','Alert']
-        vals = [vc.get(o,0) for o in ords]
-        cols = ['#2ecc71','#f1c40f','#e74c3c']
-        fig, ax = plt.subplots(figsize=(4,3))
-        ax.bar(ords, vals, color=cols)
-        ax.set_ylabel('Cant. muestras')
-        for i,v in enumerate(vals): ax.text(i,v+2,str(v),ha='center')
-        st.pyplot(fig)
-
-        # ---------------------------------------------
-        # Histograma discreto por intervalos definidos por usuario
-        # ---------------------------------------------
-        st.subheader("📊 Distribución por intervalos")
-        # Selección de variable y número de intervalos
-        var_int = st.selectbox("Variable para intervalos:", valid_vars, key="var_int")
-        n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1, key="n_int")
-        # Calcular rangos
-        serie = df[var_int].dropna()
-        min_v, max_v = serie.min(), serie.max()
-        bins = list(pd.interval_range(start=min_v, end=max_v, periods=n_int))
-        # Contar valores en cada intervalo
-        conteos = [serie.between(interval.left, interval.right, inclusive='left').sum() for interval in bins]
-        # Etiquetas legibles
-        labels = []
-        for i, interval in enumerate(bins):
-            if i == 0:
-                labels.append(f"< {interval.right:.2f}")
-            else:
-                labels.append(f"{interval.left:.2f} - {interval.right:.2f}")
-        # Gráfico de barras
-        fig_int, ax_int = plt.subplots(figsize=(6, 3))
-        ax_int.bar(labels, conteos, color=sns.color_palette('tab10', len(labels)))
-        ax_int.set_xlabel(var_int)
-        ax_int.set_ylabel('Conteo de muestras')
-        ax_int.set_xticklabels(labels, rotation=45, ha='right')
-        ax_int.set_title(f"Distribución de {var_int} en {n_int} intervalos")
-        st.pyplot(fig_int)
-
-    # ---------------------------------------------
-    # Histogramas por variable
-    # ---------------------------------------------
-    numeric_cols = df.select_dtypes(include='number').columns.tolist()
-    vars_hist = [v for v in vars_correl if v in numeric_cols]
-    st.subheader("🔢 Distribución de variable")
-    var_hist = st.selectbox("Variable:", vars_hist, key="var_hist")
-    bins = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=10, step=1, key="bins")
-    if var_hist:
-        series = df[var_hist].dropna()
-        grouped = pd.cut(series, bins=bins)
-        freq = series.groupby(grouped).size()
-        labels = [f"{interval.left:.2f}-{interval.right:.2f}" for interval in freq.index]
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Frecuencia absoluta")
-            fig_h1, ax_h1 = plt.subplots(figsize=(4, 3))
-            ax_h1.bar(labels, freq.values, color=sns.color_palette('tab10', len(labels)))
-            ax_h1.set_xticklabels(labels, rotation=45, ha='right')
-            ax_h1.set_ylabel("Conteo")
-            st.pyplot(fig_h1)
-        with col2:
-            st.subheader("Frecuencia relativa (%)")
-            rel = freq.values / freq.values.sum() * 100
-            fig_h2, ax_h2 = plt.subplots(figsize=(4, 3))
-            ax_h2.bar(labels, rel, color=sns.color_palette('tab20', len(labels)))
-            ax_h2.set_xticklabels(labels, rotation=45, ha='right')
-            ax_h2.set_ylabel("Porcentaje")
-            st.pyplot(fig_h2)
+        orden = ['Normal', 'Caution', 'Alert']
+        vals = [vc.get(o, 0) for o in orden]
+        cols = ['#2ecc71', '#f1c40f', '#e74c3c']
+        fig1, ax1 = plt.subplots(figsize=(4, 3))
+        ax1.bar(orden, vals, color=cols)
+        ax1.set_ylabel('Cantidad de muestras')
+        for i, v in enumerate(vals): ax1.text(i, v + 2, str(v), ha='center')
+        st.pyplot(fig1)
     with c2:
-        st.subheader("Frecuencia muestreo (Top15)")
+        st.subheader("📊 Frecuencia de muestreo (Top 15 equipos)")
         top15 = df['Unit ID'].value_counts().head(15)
-        cols2 = sns.color_palette('viridis',len(top15))
-        fig, ax = plt.subplots(figsize=(4,3))
-        ax.barh(top15.index, top15.values, color=cols2)
-        ax.set_xlabel('N° muestras')
-        for i,v in enumerate(top15.values): ax.text(v+1,i,str(v),va='center')
-        st.pyplot(fig)
+        cols2 = sns.color_palette('viridis', len(top15))
+        fig2, ax2 = plt.subplots(figsize=(4, 3))
+        ax2.barh(top15.index, top15.values, color=cols2)
+        ax2.set_xlabel('Número de muestras')
+        for i, v in enumerate(top15.values): ax2.text(v + 1, i, str(v), va='center')
+        st.pyplot(fig2)
 
-    # Fila2: Intervalos + Pareto Alert
-    c3,c4 = st.columns(2)
+    # Fila 2: Intervalos promedio y Pareto Alert
+    c3, c4 = st.columns(2)
     with c3:
-        st.subheader("Intervalo promedio (Top15)")
-        mt = mean_int.loc[top15.index].dropna()
-        fig, ax = plt.subplots(figsize=(4,3))
-        ax.barh(mt.index, mt.values, color=sns.color_palette('mako',len(mt)))
-        ax.set_xlabel('Días promedio')
-        for i,v in enumerate(mt.values): ax.text(v+0.5,i,f"{v:.1f}",va='center')
-        st.markdown(f"**Nota:** Promedio Top15 = {mt.mean():.1f} días")
-        st.pyplot(fig)
+        st.subheader("⏱️ Intervalo promedio (Top 15 equipos)")
+        mean_top = mean_int.loc[top15.index].dropna()
+        fig3, ax3 = plt.subplots(figsize=(4, 3))
+        ax3.barh(mean_top.index, mean_top.values, color=sns.color_palette('mako', len(mean_top)))
+        ax3.set_xlabel('Días promedio')
+        for i, v in enumerate(mean_top.values): ax3.text(v + 0.5, i, f"{v:.1f}", va='center')
+        st.markdown(f"**Nota:** Promedio Top 15 = {mean_top.mean():.1f} días")
+        st.pyplot(fig3)
     with c4:
-        st.subheader("Pareto Alert (Top10)")
-        ser = pd.Series({c.replace('RESULT_',''): (df[c+'_status']=='Alert').sum() for c in result_cols})
-        ser = ser.sort_values(ascending=False).head(10)
-        cols4 = sns.color_palette('Reds',len(ser))
-        fig, ax = plt.subplots(figsize=(4,3))
-        ser.plot.barh(color=cols4, ax=ax)
-        ax.invert_yaxis(); ax.grid(axis='x',linestyle='--',alpha=0.5)
-        ax.set_xlabel('N Alertas'); ax.set_title('Pareto Alert')
-        for i,v in enumerate(ser.values): ax.text(v+1,i,str(v),va='center')
-        cum = ser.cumsum()/ser.sum()*100
-        ax2 = ax.twiny(); ax2.plot(cum.values,range(len(cum)),'-ok'); ax2.set_xlabel('% acum')
-        for i,p in enumerate(cum): ax2.text(p+2,i,f"{p:.0f}%",va='center')
-        st.pyplot(fig)
+        st.subheader("📋 Pareto: Alert por parámetro (Top 10)")
+        alert_ser = pd.Series({
+            c.replace('RESULT_', ''): (df[c + '_status'] == 'Alert').sum()
+            for c in result_cols
+        }).sort_values(ascending=False).head(10)
+        cols4 = sns.color_palette('Reds', len(alert_ser))
+        fig4, ax4 = plt.subplots(figsize=(4, 3))
+        alert_ser.plot.barh(color=cols4, ax=ax4)
+        ax4.invert_yaxis()
+        ax4.set_xlabel('Número de Alertas')
+        ax4.grid(axis='x', linestyle='--', alpha=0.5)
+        for i, v in enumerate(alert_ser.values): ax4.text(v + 1, i, str(v), va='center')
+        cum4 = alert_ser.cumsum() / alert_ser.sum() * 100
+        ax4_line = ax4.twiny()
+        ax4_line.plot(cum4.values, range(len(cum4)), '-o', color='black')
+        ax4_line.set_xlabel('% acumulado')
+        for i, pct in enumerate(cum4): ax4_line.text(pct + 2, i, f"{pct:.0f}%", va='center')
+        st.pyplot(fig4)
 
-    # Fila3: Pareto Caution + combos Alert
-    c5,c6 = st.columns(2)
+    # Fila 3: Pareto Caution y combos Alert
+    c5, c6 = st.columns(2)
     with c5:
-        st.subheader("Pareto Caution (Top10)")
-        ser2 = pd.Series({c.replace('RESULT_',''): (df[c+'_status']=='Caution').sum() for c in result_cols})
-        ser2 = ser2.sort_values(ascending=False).head(10)
-        cols5 = sns.color_palette('YlOrBr',len(ser2))
-        fig,ax=plt.subplots(figsize=(4,3))
-        ser2.plot.barh(color=cols5,ax=ax)
-        ax.invert_yaxis();ax.grid(axis='x',linestyle='--',alpha=0.5)
-        ax.set_xlabel('N Cautions'); ax.set_title('Pareto Caution')
-        for i,v in enumerate(ser2.values): ax.text(v+1,i,str(v),va='center')
-        cum2=ser2.cumsum()/ser2.sum()*100
-        axb=ax.twiny();axb.plot(cum2.values,range(len(cum2)),'-ok'); axb.set_xlabel('% acum')
-        for i,p in enumerate(cum2): axb.text(p+2,i,f"{p:.0f}%",va='center')
-        st.pyplot(fig)
+        st.subheader("📋 Pareto: Caution por parámetro (Top 10)")
+        caut_ser = pd.Series({
+            c.replace('RESULT_', ''): (df[c + '_status'] == 'Caution').sum()
+            for c in result_cols
+        }).sort_values(ascending=False).head(10)
+        cols5 = sns.color_palette('YlOrBr', len(caut_ser))
+        fig5, ax5 = plt.subplots(figsize=(4, 3))
+        caut_ser.plot.barh(color=cols5, ax=ax5)
+        ax5.invert_yaxis()
+        ax5.set_xlabel('Número de Cautions')
+        ax5.grid(axis='x', linestyle='--', alpha=0.5)
+        for i, v in enumerate(caut_ser.values): ax5.text(v + 1, i, str(v), va='center')
+        cum5 = caut_ser.cumsum() / caut_ser.sum() * 100
+        ax5_line = ax5.twiny()
+        ax5_line.plot(cum5.values, range(len(cum5)), '-o', color='black')
+        ax5_line.set_xlabel('% acumulado')
+        for i, pct in enumerate(cum5): ax5_line.text(pct + 2, i, f"{pct:.0f}%", va='center')
+        st.pyplot(fig5)
     with c6:
-        st.subheader("Pareto combos Alert (Top10)")
-        combos={}
-        for _,r in df.iterrows():
-            keys=[c.replace('RESULT_','') for c in result_cols if r[c+'_status']=='Alert']
-            for a,b in combinations(keys,2): combos[f"{a}&{b}"]=combos.get(f"{a}&{b}",0)+1
-        ser3=pd.Series(combos).sort_values(ascending=False).head(10)
-        cols6=sns.color_palette('PuRd',len(ser3))
-        fig,ax=plt.subplots(figsize=(4,3))
-        ser3.plot.barh(color=cols6,ax=ax)
-        ax.invert_yaxis();ax.grid(axis='x',linestyle='--',alpha=0.5)
-        ax.set_xlabel('N muestras'); ax.set_title('Pareto combos')
-        for i,v in enumerate(ser3.values): ax.text(v+1,i,str(v),va='center')
-        cum3=ser3.cumsum()/ser3.sum()*100
-        axb=ax.twiny();axb.plot(cum3.values,range(len(cum3)),'-ok'); axb.set_xlabel('% acum')
-        for i,p in enumerate(cum3): axb.text(p+2,i,f"{p:.0f}%",va='center')
-        st.pyplot(fig)
+        st.subheader("🔗 Pareto: combos Alert (Top 10)")
+        combos = {}
+        for _, row in df.iterrows():
+            alerts = [c.replace('RESULT_', '') for c in result_cols if row[c + '_status'] == 'Alert']
+            if len(alerts) > 1:
+                for a, b in combinations(alerts, 2):
+                    key = f"{a} & {b}"
+                    combos[key] = combos.get(key, 0) + 1
+        comb_ser = pd.Series(combos).sort_values(ascending=False).head(10)
+        cols6 = sns.color_palette('PuRd', len(comb_ser))
+        fig6, ax6 = plt.subplots(figsize=(4, 3))
+        comb_ser.plot.barh(color=cols6, ax=ax6)
+        ax6.invert_yaxis()
+        ax6.set_xlabel('Número de muestras')
+        ax6.grid(axis='x', linestyle='--', alpha=0.5)
+        for i, v in enumerate(comb_ser.values): ax6.text(v + 1, i, str(v), va='center')
+        cum6 = comb_ser.cumsum() / comb_ser.sum() * 100
+        ax6_line = ax6.twiny()
+        ax6_line.plot(cum6.values, range(len(cum6)), '-o', color='black')
+        ax6_line.set_xlabel('% acumulado')
+        for i, pct in enumerate(cum6): ax6_line.text(pct + 2, i, f"{pct:.0f}%", va='center')
+        st.pyplot(fig6)
 
-        # Filtrar variables numéricas válidas para correlación
+    # ---------------------------------------------
+    # Correlación de variables seleccionadas (Heatmap ajustado)
+    # ---------------------------------------------
     numeric_cols = df.select_dtypes(include='number').columns.tolist()
     valid_vars = [v for v in vars_correl if v in numeric_cols]
     if not valid_vars:
@@ -248,47 +224,73 @@ try:
     else:
         st.markdown(
             """
-            A continuación se muestra un **heatmap de correlación** para las variables seleccionadas.
-            - Los valores cercanos a **1** indican una correlación positiva alta.
-            - Valores cercanos a **-1** indican una correlación negativa alta.
-            - Un valor de **0** significa que no hay correlación lineal aparente.
-
-            Selecciona cuántas variables quieres analizar y luego elige cada una.
+            **Heatmap de correlación**: interpreta los coeficientes de Pearson.
+            - **1.0** = correlación positiva perfecta
+            - **0.0** = sin correlación lineal
+            - **-1.0** = correlación negativa perfecta
             """
         )
         n = st.number_input(
-            "¿Cuántas variables quieres correlacionar?",
-            min_value=2, max_value=len(valid_vars), value=2, step=1
+            "¿Cuántas variables quieres correlacionar?", min_value=2,
+            max_value=len(valid_vars), value=2, step=1
         )
         sel = st.multiselect(
             "Selecciona las variables:", valid_vars,
             default=valid_vars[:n]
         )
         if len(sel) == n:
+            # limpiar y convertir
+            for col in sel:
+                df[col] = pd.to_numeric(
+                    df[col].astype(str).str.replace(r"[^0-9\.\-]", "", regex=True),
+                    errors='coerce'
+                )
             corr = df[sel].corr()
-            # Ajuste dinámico de tamaño de figura y fuente para mejor legibilidad
             size = max(4, n * 0.6)
-            annot_font = max(6, int(12 - n / 2))
-            fig, ax = plt.subplots(figsize=(size, size))
+            annot_font = max(6, 14 - n)
+            fig7, ax7 = plt.subplots(figsize=(size, size))
             sns.heatmap(
-                corr,
-                annot=True,
-                fmt='.2f',
-                cmap='coolwarm',
-                annot_kws={'fontsize': annot_font},
-                linewidths=0.5,
-                square=True,
-                ax=ax
+                corr, annot=True, fmt='.2f', cmap='coolwarm',
+                annot_kws={'fontsize': annot_font}, linewidths=0.5,
+                square=True, ax=ax7
             )
-            ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=annot_font)
-            ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=annot_font)
-            ax.set_title('Heatmap de correlación', fontsize=annot_font+2)
-            st.pyplot(fig)
+            ax7.set_xticklabels(ax7.get_xticklabels(), rotation=45, ha='right', fontsize=annot_font)
+            ax7.set_yticklabels(ax7.get_yticklabels(), rotation=0, fontsize=annot_font)
+            ax7.set_title('Heatmap de correlación', fontsize=annot_font+2)
+            st.pyplot(fig7)
         else:
             st.warning(f"Selecciona exactamente {n} variables.")
 
+    # ---------------------------------------------
+    # Distribución por intervalos
+    # ---------------------------------------------
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    vars_int = [v for v in vars_correl if v in numeric_cols]
+    st.subheader("📊 Distribución por intervalos")
+    var_int = st.selectbox("Variable para intervalos:", vars_int)
+    n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1)
+    if var_int:
+        serie = df[var_int].dropna()
+        min_v, max_v = serie.min(), serie.max()
+        bins = pd.interval_range(start=min_v, end=max_v, periods=n_int)
+        conteos = [serie.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
+        labels = [f"< {bins[0].right:.2f}"] + [f"{iv.left:.2f}-{iv.right:.2f}" for iv in bins[1:]]
+        col_int1, col_int2 = st.columns(2)
+        with col_int1:
+            st.subheader("Frecuencia absoluta")
+            fig8, ax8 = plt.subplots(figsize=(4,3))
+            ax8.bar(labels, conteos, color=sns.color_palette('tab10', len(labels)))
+            ax8.set_xticklabels(labels, rotation=45, ha='right')
+            ax8.set_ylabel('Conteo')
+            st.pyplot(fig8)
+        with col_int2:
+            st.subheader("Frecuencia relativa (%)")
+            rel = [c / sum(conteos) * 100 for c in conteos]
+            fig9, ax9 = plt.subplots(figsize=(4,3))
+            ax9.bar(labels, rel, color=sns.color_palette('tab20', len(labels)))
+            ax9.set_xticklabels(labels, rotation=45, ha='right')
+            ax9.set_ylabel('Porcentaje')
+            st.pyplot(fig9)
+
 except Exception as e:
-    st.error(f"Error al procesar archivo: {e}")
-    st.error(f"Error al procesar archivo: {e}")
-
-
+    st.error(f"❌ Error al procesar archivo: {e}")
