@@ -46,7 +46,7 @@ archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
 
 if archivo:
     try:
-        # Lectura y validación de columnas básicas
+        # Leer y validar columnas básicas
         df = pd.read_excel(archivo)
         falt = sorted(set(columnas_esperadas) - set(df.columns))
         if falt:
@@ -57,13 +57,13 @@ if archivo:
         # Convertir 'Date Reported' a datetime
         df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
 
-        # Detectar y mapear columnas RESULT_ a estados
+        # Detectar y mapear columnas RESULT_
         result_cols = [c for c in df.columns if c.startswith('RESULT_')]
         for col in result_cols:
             df[col + '_status'] = (
                 df[col].astype(str)
-                       .str.strip()
-                       .map(lambda x: status_map.get(x, 'Normal'))
+                     .str.strip()
+                     .map(lambda x: status_map.get(x, 'Normal'))
             )
 
         # Métricas generales
@@ -88,6 +88,7 @@ if archivo:
         # ---------------------------------------------
         # Gráficos en 3 filas x 2 columnas (6 en total)
         # ---------------------------------------------
+
         # Fila 1: Estados y Frecuencia de muestreo
         r1c1, r1c2 = st.columns(2)
         with r1c1:
@@ -102,7 +103,8 @@ if archivo:
             ax1.set_ylabel('Cantidad')
             ax1.spines[['top','right']].set_visible(False)
             for p in ax1.patches:
-                ax1.annotate(int(p.get_height()), (p.get_x()+p.get_width()/2, p.get_height()),
+                ax1.annotate(int(p.get_height()),
+                             (p.get_x()+p.get_width()/2, p.get_height()),
                              ha='center', va='bottom')
             # Línea de porcentaje acumulado
             cum1 = pd.Series(vals, index=labels).cumsum() / sum(vals) * 100
@@ -121,7 +123,8 @@ if archivo:
             ax2.set_xlabel('N° muestras')
             ax2.spines[['top','right']].set_visible(False)
             for p in ax2.patches:
-                ax2.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                ax2.annotate(int(p.get_width()),
+                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
                              va='center')
             cum2 = top15.cumsum() / top15.sum() * 100
             ax2_line = ax2.twiny()
@@ -144,21 +147,26 @@ if archivo:
             ax3.set_xlabel('Días promedio')
             ax3.spines[['top','right']].set_visible(False)
             for p in ax3.patches:
-                ax3.annotate(f"{p.get_width():.1f}", (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                ax3.annotate(f"{p.get_width():.1f}",
+                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
                              va='center')
             st.pyplot(fig3)
         with r2c2:
             st.subheader("📋 Pareto: Alert por parámetro (Top 10)")
-            alert_ser = (pd.Series({col.replace('RESULT_',''): (df[col+'_status']=='Alert').sum()
-                                    for col in result_cols})
-                        .sort_values(ascending=False)
-                        .head(10))
+            alert_ser = (
+                pd.Series(
+                    {col.replace('RESULT_',''): (df[col+'_status']=='Alert').sum() for col in result_cols}
+                )
+                .sort_values(ascending=False)
+                .head(10)
+            )
             fig4, ax4 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=alert_ser.values, y=alert_ser.index, color='#e74c3c', ax=ax4)
             ax4.set_xlabel('N Alert')
             ax4.spines[['top','right']].set_visible(False)
             for p in ax4.patches:
-                ax4.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                ax4.annotate(int(p.get_width()),
+                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
                              va='center')
             cum4 = alert_ser.cumsum() / alert_ser.sum() * 100
             ax4_line = ax4.twiny()
@@ -173,16 +181,55 @@ if archivo:
         r3c1, r3c2 = st.columns(2)
         with r3c1:
             st.subheader("📋 Pareto: Caution por parámetro (Top 10)")
-            caution_ser = (pd.Series({col.replace('RESULT_',''): (df[col+'_status']=='Caution').sum()
-                                     for col in result_cols})
-                          .sort_values(ascending=False)
-                          .head(10))
+            caution_ser = (
+                pd.Series(
+                    {col.replace('RESULT_',''): (df[col+'_status']=='Caution').sum() for col in result_cols}
+                )
+                .sort_values(ascending=False)
+                .head(10)
+            )
             fig5, ax5 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=caution_ser.values, y=caution_ser.index, color='#f1c40f', ax=ax5)
             ax5.set_xlabel('N Caution')
             ax5.spines[['top','right']].set_visible(False)
             for p in ax5.patches:
-                ax5.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
-            cum5 = caution_ser.cumsum() / caution_ser.sum() хотите.scalajsInterruptedException
+                ax5.annotate(int(p.get_width()),
+                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                             va='center')
+            cum5 = caution_ser.cumsum() / caution_ser.sum() * 100
+            ax5_line = ax5.twiny()
+            ax5_line.plot(cum5.values, cum5.index, '-o', color='#2c3e50')
+            ax5_line.set_xlabel('Porcentaje acumulado')
+            ax5_line.spines[['top','right']].set_visible(False)
+            for x, y in zip(cum5.values, cum5.index):
+                ax5_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+            st.pyplot(fig5)
+        with r3c2:
+            st.subheader("🔗 Pareto: combos Alert (Top 10)")
+            comb_counts = {}
+            for _, row in df.iterrows():
+                alerts = [c.replace('RESULT_','') for c in result_cols if row[c+'_status']=='Alert']
+                if len(alerts) > 1:
+                    for combo in combinations(alerts, 2):
+                        key = ' & '.join(combo)
+                        comb_counts[key] = comb_counts.get(key, 0) + 1
+            comb_ser = pd.Series(comb_counts).sort_values(ascending=False).head(10)
+            fig6, ax6 = plt.subplots(figsize=(4, 3))
+            sns.barplot(x=comb_ser.values, y=comb_ser.index, color='#c0392b', ax=ax6)
+            ax6.set_xlabel('N muestras')
+            ax6.spines[['top','right']].set_visible(False)
+            for p in ax6.patches:
+                ax6.annotate(int(p.get_width()),
+                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
+                             va='center')
+            cum6 = comb_ser.cumsum() / comb_ser.sum() * 100
+            ax6_line = ax6.twiny()
+            ax6_line.plot(cum6.values, cum6.index, '-o', color='#16a085')
+            ax6_line.set_xlabel('Porcentaje acumulado')
+            ax6_line.spines[['top','right']].set_visible(False)
+            for x, y in zip(cum6.values, cum6.index):
+                ax6_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+            st.pyplot(fig6)
 
-
+    except Exception as e:
+        st.error(f"❌ Error al procesar archivo: {e}")
