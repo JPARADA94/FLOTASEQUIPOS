@@ -26,11 +26,13 @@ status_map = {'*': 'Alert', '+': 'Caution', '': 'Normal'}
 
 # Título e instrucciones
 st.title("📊 Análisis de Flotas de Equipos - Mobil Serv")
-st.markdown(
-    """
-    Esta aplicación analiza datos históricos de flotas específicas.
-
-    ✅ **Importante:** el archivo Excel debe estar filtrado (un único modelo) y usar formato **Mobil Serv**.
+        st.markdown(f"""
+- Total muestras: **{total}**  
+- Lubricantes distintos: **{lubs}**  
+- Operaciones distintas: **{ops}**  
+- Rango fechas: **{fecha_min}** a **{fecha_max}**  
+- Equipos distintos: **{equipos}**
+""") y usar formato **Mobil Serv**.
     """
 )
 
@@ -194,5 +196,3 @@ if archivo:
 
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
-
-
