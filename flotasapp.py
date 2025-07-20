@@ -48,7 +48,7 @@ st.title("📊 Análisis de Flotas - Mobil Serv")
 # Mostrar información de autor
 st.markdown(
     """
-    **Autor:** Tu Nombre  \
+    **Autor:** Javier Parada - Ingeniero de soporte en campo  \
     **Fecha de creación:** 2025-07-20
     """
 )
