@@ -172,6 +172,16 @@ try:
         st.pyplot(fig)
 
     # Correlación con heatmap
+    st.markdown(
+        """
+        A continuación se muestra un **heatmap de correlación** para las variables seleccionadas.
+        - Los valores cercanos a **1** indican una correlación positiva alta.
+        - Valores cercanos a **-1** indican una correlación negativa alta.
+        - Un valor de **0** significa que no hay correlación lineal aparente.
+
+        Selecciona cuántas variables quieres analizar y luego elige cada una.
+        """
+    )
     st.subheader("Correlación variables seleccionadas")
     n = st.number_input("¿Cuántas variables?",2,len(vars_correl),2)
     sel = st.multiselect("Variables:",vars_correl,default=vars_correl[:n])
@@ -184,3 +194,4 @@ try:
 
 except Exception as e:
     st.error(f"Error al procesar archivo: {e}")
+
