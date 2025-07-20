@@ -78,14 +78,14 @@ try:
 
     # Resumen
     st.subheader("🔎 Resumen")
-    st.markdown(
-        f"- Total muestras: **{total}**  
-        - Lubricantes: **{lubs}**  
-        - Operaciones: **{ops}**  
-        - Fechas: {fecha_min} a {fecha_max}  
-        - Equipos: **{equipos}**  
-        - Intervalo medio: **{overall_mean:.1f}** días"
-    )
+    st.markdown(f"""
+- Total muestras: **{total}**  
+- Lubricantes: **{lubs}**  
+- Operaciones: **{ops}**  
+- Fechas: {fecha_min} a {fecha_max}  
+- Equipos: **{equipos}**  
+- Intervalo medio: **{overall_mean:.1f}** días
+""")
 
     # 6 Gráficos
     # Fila1: Estados + Frecuencia
@@ -184,5 +184,3 @@ try:
 
 except Exception as e:
     st.error(f"Error al procesar archivo: {e}")
-
-
