@@ -296,23 +296,36 @@ try:
         st.table(df_bins)
 
     # ---------------------------------------------
-    # Evolución temporal de variables seleccionadas
+    # Evolución temporal de variables seleccionadas (gráfico de líneas)
     # ---------------------------------------------
     st.subheader("📈 Evolución temporal de variables")
     vars_time = [v for v in vars_correl if v in numeric_cols]
-    sel_time = st.multiselect("Selecciona variables a graficar en el tiempo:", vars_time)
+    sel_time = st.multiselect(
+        "Selecciona variables a graficar en el tiempo:", vars_time
+    )
     if sel_time:
+        # Preparar datos: index por fecha y ordenar
         df_time = df[['Date Reported'] + sel_time].dropna(subset=['Date Reported'])
         df_time = df_time.set_index('Date Reported').sort_index()
-        # Resample diario y calcular media
+        # Agrupar por día y calcular media
         df_res = df_time.resample('D').mean()
+        # Graficar líneas con marcadores y grid
         fig_time, ax_time = plt.subplots(figsize=(8, 4))
         for col in sel_time:
-            ax_time.plot(df_res.index, df_res[col], marker='o', label=col)
+            ax_time.plot(
+                df_res.index,
+                df_res[col],
+                marker='o',
+                linewidth=2,
+                label=col
+            )
         ax_time.set_xlabel('Fecha')
-        ax_time.set_ylabel('Valor medio')
-        ax_time.legend()
+        ax_time.set_ylabel('Unidades')
+        ax_time.set_title('Evolución temporal')
+        ax_time.grid(True, linestyle='--', alpha=0.6)
+        ax_time.legend(title='Variable', loc='upper right')
         plt.xticks(rotation=45)
+        plt.tight_layout()
         st.pyplot(fig_time)
 
 except Exception as e:
@@ -322,4 +335,5 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
+
 
