@@ -23,7 +23,7 @@ columnas_esperadas = [
     'Report Status', 'Date Reported', 'Unit ID', 'Tested Lubricant', 'Manufacturer', 'Alt Model',
     'Account Name', 'Parent Account Name', 'Equipment Age', 'Oil Age', 'Oxidation (Ab/cm)',
     'TBN (mg KOH/g)', 'Visc@100C (cSt)', 'TAN (mg KOH/g)', 'Fuel Dilut. (Vol%)', 'Nitration (Ab/cm)',
-    'Particle Count  >4um', 'Particle Count  >6um', 'Particle Count  >14um',
+    'Particle Count  >4um', 'Particle Count  >6um', 'Particle Count>14um',
     'Visc@40C (cSt)', 'Soot (Wt%)'
 ]
 
