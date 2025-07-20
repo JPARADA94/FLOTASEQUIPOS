@@ -177,35 +177,40 @@ if archivo:
                 ax6.annotate(int(v), (v+0.5, i), va='center')
             st.pyplot(fig6)
 
-                # ---------------------------------------------
-        # Nuevos mapas de calor (usuario elige variables fijas)
+                        # ---------------------------------------------
+        # Relación de variables con opciones de gráfico
         # ---------------------------------------------
+        # Variables disponibles
         heatmap_vars = [
             'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
             'Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)', 'Mo (Molybdenum)',
-            'Pb (Lead)', 'PQ Index',
-            'Oxidation (Ab/cm)', 'TBN (mg KOH/g)', 'Visc@100C (cSt)', 'TAN (mg KOH/g)',
-            'Fuel Dilut. (Vol%)', 'Nitration (Ab/cm)', 'Particle Count  >4um', 'Particle Count  >6um',
-            'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)'
+            'Pb (Lead)', 'PQ Index', 'Oxidation (Ab/cm)', 'TBN (mg KOH/g)', 'Visc@100C (cSt)',
+            'TAN (mg KOH/g)', 'Fuel Dilut. (Vol%)', 'Nitration (Ab/cm)', 'Particle Count  >4um',
+            'Particle Count  >6um', 'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)'
         ]
-        h1, h2 = st.columns(2)
-        with h1:
-            st.subheader("🌡️ Mapa de calor 1")
-            x1 = st.selectbox("Variable X", heatmap_vars, key="x1")
-            y1 = st.selectbox("Variable Y", heatmap_vars, key="y1")
-            corr1 = df[[x1, y1]].corr()
-            fig7, ax7 = plt.subplots(figsize=(4, 3))
-            sns.heatmap(corr1, annot=True, fmt=".2f", ax=ax7)
-            st.pyplot(fig7)
-        with h2:
-            st.subheader("🌡️ Mapa de calor 2")
-            x2 = st.selectbox("Variable X", heatmap_vars, key="x2")
-            y2 = st.selectbox("Variable Y", heatmap_vars, key="y2")
-            corr2 = df[[x2, y2]].corr()
-            fig8, ax8 = plt.subplots(figsize=(4, 3))
-            sns.heatmap(corr2, annot=True, fmt=".2f", ax=ax8)
-            st.pyplot(fig8)
-
+        rel1, rel2 = st.columns(2)
+        for idx, rel in enumerate([rel1, rel2], start=1):
+            with rel:
+                st.subheader(f"🔍 Relación variables {idx}")
+                x_var = st.selectbox(f"Variable X #{idx}", heatmap_vars, key=f"x_rel{idx}")
+                y_var = st.selectbox(f"Variable Y #{idx}", heatmap_vars, key=f"y_rel{idx}")
+                tipo = st.radio("Tipo de gráfico", ["Heatmap","Scatter"], key=f"tipo{idx}", horizontal=True)
+                if tipo == "Heatmap":
+                    corr = df[[x_var, y_var]].corr()
+                    fig, ax = plt.subplots(figsize=(4, 3))
+                    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+                    ax.set_title(f"Correlación: {x_var} vs {y_var}")
+                    st.pyplot(fig)
+                else:
+                    fig, ax = plt.subplots(figsize=(4, 3))
+                    sns.scatterplot(data=df, x=x_var, y=y_var,
+                                    hue=df['Report Status'].map({'Normal':'🟢','Caution':'🟡','Alert':'🔴'}),
+                                    palette=["#2ecc71","#f1c40f","#e74c3c"], alpha=0.7, ax=ax)
+                    sns.regplot(data=df, x=x_var, y=y_var, scatter=False, ax=ax, color="black")
+                    ax.set_title(f"Scatter: {x_var} vs {y_var}")
+                    ax.legend(title='Estado', loc='upper right')
+                    st.pyplot(fig)
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
+
 
