@@ -278,63 +278,62 @@ try:
             st.warning(f"Selecciona exactamente {n} variables.")
 
     # ---------------------------------------------
-    # Distribución por intervalos
+    # Distribución por intervalos - Variable 1
     # ---------------------------------------------
-    st.subheader("📊 Distribución por intervalos de dos variables")
-    # Variables numéricas disponibles
+    st.subheader("📊 Distribución por intervalos (Variable 1)")
     numeric_cols = df.select_dtypes(include='number').columns.tolist()
     vars_int = [v for v in vars_correl if v in numeric_cols]
-    # Selección de dos variables
-    var1 = st.selectbox("Variable 1:", vars_int, key="var_int1")
-    var2 = st.selectbox("Variable 2:", vars_int, key="var_int2")
-    n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1, key="n_int")
-    if var1 and var2:
-        # Series limpias
+    var1 = st.selectbox("Variable 1:", vars_int, key="var1")
+    n_int1 = st.number_input("Número de intervalos Variable 1:", min_value=2, max_value=50, value=5, step=1, key="n_int1")
+    if var1:
         s1 = df[var1].dropna()
+        bins1 = pd.interval_range(start=s1.min(), end=s1.max(), periods=n_int1)
+        counts1 = [s1.between(iv.left, iv.right, inclusive='left').sum() for iv in bins1]
+        labels1 = [f"< {bins1[0].right:.2f}"] + [f"{iv.left:.2f}-{iv.right:.2f}" for iv in bins1[1:]]
+        col1a, col1r = st.columns(2)
+        with col1a:
+            st.markdown("**Frecuencia absoluta**: número de muestras en cada intervalo.")
+            fig1a, ax1a = plt.subplots(figsize=(4,3))
+            ax1a.bar(labels1, counts1, color=sns.color_palette('tab10', len(labels1)))
+            ax1a.set_ylabel('Conteo')
+            ax1a.set_xticklabels(labels1, rotation=45, ha='right')
+            st.pyplot(fig1a)
+        with col1r:
+            st.markdown("**Frecuencia relativa (%)**: porcentaje de muestras en cada intervalo.")
+            rel1 = [c/sum(counts1)*100 if sum(counts1)>0 else 0 for c in counts1]
+            fig1r, ax1r = plt.subplots(figsize=(4,3))
+            ax1r.bar(labels1, rel1, color=sns.color_palette('tab20', len(labels1)))
+            ax1r.set_ylabel('Porcentaje')
+            ax1r.set_xticklabels(labels1, rotation=45, ha='right')
+            st.pyplot(fig1r)
+
+    # ---------------------------------------------
+    # Distribución por intervalos - Variable 2
+    # ---------------------------------------------
+    st.subheader("📊 Distribución por intervalos (Variable 2)")
+    var2 = st.selectbox("Variable 2:", vars_int, key="var2")
+    n_int2 = st.number_input("Número de intervalos Variable 2:", min_value=2, max_value=50, value=5, step=1, key="n_int2")
+    if var2:
         s2 = df[var2].dropna()
-        # Definir rangos comunes del min de ambas al max de ambas
-        overall_min = min(s1.min(), s2.min())
-        overall_max = max(s1.max(), s2.max())
-        bins = pd.interval_range(start=overall_min, end=overall_max, periods=n_int)
-        # Conteos por intervalo
-        counts1 = [s1.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
-        counts2 = [s2.between(iv.left, iv.right, inclusive='left').sum() for iv in bins]
-        # Etiquetas
-        labels = [f"< {bins[0].right:.2f}"] + [f"{iv.left:.2f} - {iv.right:.2f}" for iv in bins[1:]]
-        # Mostrar ambos histogramas
-        col_abs, col_rel = st.columns(2)
-        with col_abs:
-            st.subheader("Frecuencia absoluta (var1 vs var2)")
-            fig_abs, ax_abs = plt.subplots(figsize=(4,3))
-            ax_abs.bar(labels, counts1, label=var1)
-            ax_abs.bar(labels, counts2, bottom=counts1, label=var2)
-            ax_abs.set_xticklabels(labels, rotation=45, ha='right')
-            ax_abs.set_ylabel('Conteo apilado')
-            ax_abs.legend()
-            st.pyplot(fig_abs)
-        with col_rel:
-            st.subheader("Frecuencia relativa (%) apilada")
-            total_counts = [c1+c2 for c1, c2 in zip(counts1, counts2)]
-            rel1 = [c1 / t * 100 if t>0 else 0 for c1, t in zip(counts1, total_counts)]
-            rel2 = [c2 / t * 100 if t>0 else 0 for c2, t in zip(counts2, total_counts)]
-            fig_rel, ax_rel = plt.subplots(figsize=(4,3))
-            ax_rel.bar(labels, rel1, label=var1)
-            ax_rel.bar(labels, rel2, bottom=rel1, label=var2)
-            ax_rel.set_xticklabels(labels, rotation=45, ha='right')
-            ax_rel.set_ylabel('Porcentaje apilado')
-            ax_rel.legend()
-            st.pyplot(fig_rel)
-        # Gráfico de líneas apiladas
-        st.subheader("📈 Gráfico de líneas apiladas")
-        fig_stack, ax_stack = plt.subplots(figsize=(8,4))
-        x = range(len(labels))
-        ax_stack.stackplot(x, counts1, counts2, labels=[var1, var2], colors=['#3498db','#e74c3c'])
-        ax_stack.set_xticks(x)
-        ax_stack.set_xticklabels(labels, rotation=45, ha='right')
-        ax_stack.set_ylabel('Conteo')
-        ax_stack.set_title(f'Distribución apilada: {var1} & {var2}')
-        ax_stack.legend(loc='upper right')
-        st.pyplot(fig_stack)
+        bins2 = pd.interval_range(start=s2.min(), end=s2.max(), periods=n_int2)
+        counts2 = [s2.between(iv.left, iv.right, inclusive='left').sum() for iv in bins2]
+        labels2 = [f"< {bins2[0].right:.2f}"] + [f"{iv.left:.2f}-{iv.right:.2f}" for iv in bins2[1:]]
+        col2a, col2r = st.columns(2)
+        with col2a:
+            st.markdown("**Frecuencia absoluta**: número de muestras en cada intervalo.")
+            fig2a, ax2a = plt.subplots(figsize=(4,3))
+            ax2a.bar(labels2, counts2, color=sns.color_palette('tab10', len(labels2)))
+            ax2a.set_ylabel('Conteo')
+            ax2a.set_xticklabels(labels2, rotation=45, ha='right')
+            st.pyplot(fig2a)
+        with col2r:
+            st.markdown("**Frecuencia relativa (%)**: porcentaje de muestras en cada intervalo.")
+            rel2 = [c/sum(counts2)*100 if sum(counts2)>0 else 0 for c in counts2]
+            fig2r, ax2r = plt.subplots(figsize=(4,3))
+            ax2r.bar(labels2, rel2, color=sns.color_palette('tab20', len(labels2)))
+            ax2r.set_ylabel('Porcentaje')
+            ax2r.set_xticklabels(labels2, rotation=45, ha='right')
+            st.pyplot(fig2r)
 
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
@@ -344,4 +343,3 @@ except Exception as e:
 except Exception as e:
     st.error(f"❌ Error al procesar archivo: {e}")
     st.error(f"❌ Error al procesar archivo: {e}")
-
