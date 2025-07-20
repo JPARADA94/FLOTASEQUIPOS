@@ -59,9 +59,8 @@ try:
     df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
 
     # ---------------------------------------------
-    # Limpiar y convertir a numérico columnas de variables de análisis
-    # ---------------------------------------------
-    for col in heatmap_vars:
+    # Limpiar y convertir a numérico columnas de variables de correlación
+    for col in vars_correl:
         if col in df.columns:
             df[col] = pd.to_numeric(
                 df[col].astype(str)
@@ -232,4 +231,5 @@ try:
 except Exception as e:
     st.error(f"Error al procesar archivo: {e}")
     st.error(f"Error al procesar archivo: {e}")
+
 
