@@ -7,14 +7,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import combinations
 
-# ---------------------------------------------
 # Configuración de la página
-# ---------------------------------------------
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 
-# ---------------------------------------------
 # Encabezados esperados en el Excel y mapa de estados
-# ---------------------------------------------
 columnas_esperadas = [
     'B (Boron)', 'Ca (Calcium)', 'Mg (Magnesium)', 'P (Phosphorus)', 'Zn (Zinc)',
     'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
@@ -27,9 +23,7 @@ columnas_esperadas = [
 ]
 status_map = {'*': 'Alert', '+': 'Caution', '': 'Normal'}
 
-# ---------------------------------------------
-# Título y descripción
-# ---------------------------------------------
+# Título e instrucciones
 st.title("📊 Análisis de Flotas de Equipos - Mobil Serv")
 st.markdown(
     """
@@ -39,9 +33,7 @@ st.markdown(
     """
 )
 
-# ---------------------------------------------
 # Carga del archivo
-# ---------------------------------------------
 archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
 
 if archivo:
@@ -74,6 +66,11 @@ if archivo:
         fecha_max = df['Date Reported'].max().date()
         equipos = df['Unit ID'].nunique()
 
+        # Calcular intervalo medio global
+        df_sorted = df.sort_values(['Unit ID','Date Reported'])
+        mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
+        overall_mean = mean_int.mean()
+
         # Resumen general
         st.subheader("🔎 Resumen general")
         texto_resumen = (
@@ -81,14 +78,12 @@ if archivo:
             f"- Lubricantes distintos: **{lubs}**  \n"
             f"- Operaciones distintas: **{ops}**  \n"
             f"- Rango fechas: **{fecha_min}** a **{fecha_max}**  \n"
-            f"- Equipos distintos: **{equipos}**"
+            f"- Equipos distintos: **{equipos}**  \n"
+            f"- Intervalo medio de muestreo: **{overall_mean:.1f}** días"
         )
         st.markdown(texto_resumen)
 
-        # ---------------------------------------------
-        # Gráficos en 3 filas x 2 columnas (6 en total)
-        # ---------------------------------------------
-
+        # Gráficos en 3 filas x 2 columnas
         # Fila 1: Estados y Frecuencia de muestreo
         r1c1, r1c2 = st.columns(2)
         with r1c1:
@@ -100,74 +95,48 @@ if archivo:
             colors = ['#2ecc71', '#f1c40f', '#e74c3c']
             fig1, ax1 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=labels, y=vals, palette=colors, ax=ax1)
-            ax1.set_ylabel('Cantidad')
+            ax1.set_ylabel('Cantidad de muestras')
             ax1.spines[['top','right']].set_visible(False)
             for p in ax1.patches:
-                ax1.annotate(int(p.get_height()),
-                             (p.get_x()+p.get_width()/2, p.get_height()),
-                             ha='center', va='bottom')
-            # Línea de porcentaje acumulado
-            cum1 = pd.Series(vals, index=labels).cumsum() / sum(vals) * 100
-            ax1_line = ax1.twinx()
-            ax1_line.plot(cum1.values, cum1.index, '-o', color='#34495e')
-            ax1_line.set_ylabel('Porcentaje acumulado')
-            ax1_line.spines[['top','right']].set_visible(False)
-            for x, y in zip(cum1.values, cum1.index):
-                ax1_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+                ax1.annotate(int(p.get_height()), (p.get_x()+p.get_width()/2, p.get_height()), ha='center', va='bottom')
             st.pyplot(fig1)
         with r1c2:
             st.subheader("📊 Frec. muestreo: Top 15 equipos")
             top15 = df['Unit ID'].value_counts().head(15)
             fig2, ax2 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=top15.values, y=top15.index, palette='Blues_r', ax=ax2)
-            ax2.set_xlabel('N° muestras')
+            ax2.set_xlabel('Número de muestras')
             ax2.spines[['top','right']].set_visible(False)
             for p in ax2.patches:
-                ax2.annotate(int(p.get_width()),
-                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
-                             va='center')
-            cum2 = top15.cumsum() / top15.sum() * 100
-            ax2_line = ax2.twiny()
-            ax2_line.plot(cum2.values, cum2.index, '-o', color='#8e44ad')
-            ax2_line.set_xlabel('Porcentaje acumulado')
-            ax2_line.spines[['top','right']].set_visible(False)
-            for x, y in zip(cum2.values, cum2.index):
-                ax2_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+                ax2.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
             st.pyplot(fig2)
 
-        # Fila 2: Intervalos y Pareto Alert
+        # Fila 2: Intervalos promedio Top 15 y Pareto Alert
         r2c1, r2c2 = st.columns(2)
         with r2c1:
             st.subheader("⏱️ Intervalo promedio: Top 15 equipos")
-            df_sorted = df.sort_values(['Unit ID','Date Reported'])
-            mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
             mean_top = mean_int.loc[top15.index].dropna()
             fig3, ax3 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=mean_top.values, y=mean_top.index, palette='mako', ax=ax3)
             ax3.set_xlabel('Días promedio')
             ax3.spines[['top','right']].set_visible(False)
             for p in ax3.patches:
-                ax3.annotate(f"{p.get_width():.1f}",
-                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
-                             va='center')
+                ax3.annotate(f"{p.get_width():.1f}", (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
             st.pyplot(fig3)
         with r2c2:
             st.subheader("📋 Pareto: Alert por parámetro (Top 10)")
             alert_ser = (
-                pd.Series(
-                    {col.replace('RESULT_',''): (df[col+'_status']=='Alert').sum() for col in result_cols}
-                )
-                .sort_values(ascending=False)
-                .head(10)
+                pd.Series({col.replace('RESULT_',''): (df[col+'_status']=='Alert').sum() for col in result_cols})
+                  .sort_values(ascending=False)
+                  .head(10)
             )
             fig4, ax4 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=alert_ser.values, y=alert_ser.index, color='#e74c3c', ax=ax4)
-            ax4.set_xlabel('N Alert')
+            ax4.set_xlabel('Número de Alert')
             ax4.spines[['top','right']].set_visible(False)
             for p in ax4.patches:
-                ax4.annotate(int(p.get_width()),
-                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
-                             va='center')
+                ax4.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
+            # Línea acumulada
             cum4 = alert_ser.cumsum() / alert_ser.sum() * 100
             ax4_line = ax4.twiny()
             ax4_line.plot(cum4.values, cum4.index, '-o', color='#3498db')
@@ -182,20 +151,16 @@ if archivo:
         with r3c1:
             st.subheader("📋 Pareto: Caution por parámetro (Top 10)")
             caution_ser = (
-                pd.Series(
-                    {col.replace('RESULT_',''): (df[col+'_status']=='Caution').sum() for col in result_cols}
-                )
-                .sort_values(ascending=False)
-                .head(10)
+                pd.Series({col.replace('RESULT_',''): (df[col+'_status']=='Caution').sum() for col in result_cols})
+                  .sort_values(ascending=False)
+                  .head(10)
             )
             fig5, ax5 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=caution_ser.values, y=caution_ser.index, color='#f1c40f', ax=ax5)
-            ax5.set_xlabel('N Caution')
+            ax5.set_xlabel('Número de Caution')
             ax5.spines[['top','right']].set_visible(False)
             for p in ax5.patches:
-                ax5.annotate(int(p.get_width()),
-                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
-                             va='center')
+                ax5.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
             cum5 = caution_ser.cumsum() / caution_ser.sum() * 100
             ax5_line = ax5.twiny()
             ax5_line.plot(cum5.values, cum5.index, '-o', color='#2c3e50')
@@ -216,20 +181,15 @@ if archivo:
             comb_ser = pd.Series(comb_counts).sort_values(ascending=False).head(10)
             fig6, ax6 = plt.subplots(figsize=(4, 3))
             sns.barplot(x=comb_ser.values, y=comb_ser.index, color='#c0392b', ax=ax6)
-            ax6.set_xlabel('N muestras')
+            ax6.set_xlabel('Número de muestras')
             ax6.spines[['top','right']].set_visible(False)
             for p in ax6.patches:
-                ax6.annotate(int(p.get_width()),
-                             (p.get_width()+0.5, p.get_y()+p.get_height()/2),
-                             va='center')
+                ax6.annotate(int(p.get_width()), (p.get_width()+0.5, p.get_y()+p.get_height()/2), va='center')
             cum6 = comb_ser.cumsum() / comb_ser.sum() * 100
             ax6_line = ax6.twiny()
             ax6_line.plot(cum6.values, cum6.index, '-o', color='#16a085')
             ax6_line.set_xlabel('Porcentaje acumulado')
             ax6_line.spines[['top','right']].set_visible(False)
             for x, y in zip(cum6.values, cum6.index):
-                ax6_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
-            st.pyplot(fig6)
+                ax6_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize
 
-    except Exception as e:
-        st.error(f"❌ Error al procesar archivo: {e}")
