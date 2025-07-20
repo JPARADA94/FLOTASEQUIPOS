@@ -101,41 +101,48 @@ if archivo:
         # ---------------------------------------------
         # Fila 1
         r1c1, r1c2 = st.columns(2)
-        with r1c1:
+                with r1c1:
             st.subheader("📈 Estados de muestras")
             conteo = df['Report Status'].value_counts()
             orden = ['Normal','Caution','Alert']
             vals = [conteo.get(o,0) for o in orden]
+            labels = ['🟢 Normal','🟡 Caution','🔴 Alert']
+            # Colores distintos por barra
+            palette1 = sns.color_palette("tab10", len(vals))
             fig1, ax1 = plt.subplots(figsize=(4,3))
-            ax1.bar(['🟢 Normal','🟡 Caution','🔴 Alert'], vals)
+            ax1.bar(labels, vals, color=palette1)
             ax1.set_ylabel('Cantidad de muestras')
             ax1.spines[['top','right']].set_visible(False)
-            for p, lbl in zip(ax1.patches, vals):
-                ax1.annotate(lbl, (p.get_x()+p.get_width()/2, lbl), ha='center', va='bottom')
+            for i, v in enumerate(vals):
+                ax1.annotate(int(v), (i, v), ha='center', va='bottom')
             st.pyplot(fig1)
-        with r1c2:
+                with r1c2:
             st.subheader("📊 Frec. muestreo: Top 15 equipos")
             top15 = df['Unit ID'].value_counts().head(15)
+            n = len(top15)
+            palette2 = sns.color_palette("viridis", n)
             fig2, ax2 = plt.subplots(figsize=(4,3))
-            ax2.barh(top15.index, top15.values)
+            ax2.barh(top15.index, top15.values, color=palette2)
             ax2.set_xlabel('Número de muestras')
             ax2.spines[['top','right']].set_visible(False)
             for i, v in enumerate(top15.values):
-                ax2.annotate(v, (v+0.5, i), va='center')
+                ax2.annotate(int(v), (v + 0.5, i), va='center')
             st.pyplot(fig2)
 
         # Fila 2
         r2c1, r2c2 = st.columns(2)
-        with r2c1:
+                with r2c1:
             st.subheader("⏱️ Intervalo promedio: Top 15 equipos")
             mean_top = mean_int.loc[top15.index].dropna()
             fig3, ax3 = plt.subplots(figsize=(4,3))
-            ax3.barh(mean_top.index, mean_top.values)
+            ax3.barh(mean_top.index, mean_top.values, color=sns.color_palette("mako", len(mean_top)))
             ax3.set_xlabel('Días promedio')
             ax3.spines[['top','right']].set_visible(False)
             for i, v in enumerate(mean_top.values):
-                ax3.annotate(f"{v:.1f}", (v+0.5, i), va='center')
+                ax3.annotate(f"{v:.1f}", (v + 0.5, i), va='center')
             st.pyplot(fig3)
+            # Nota de promedio
+            st.markdown(f"**Nota:** Intervalo medio Top 15: {mean_top.mean():.1f} días")
         with r2c2:
             st.subheader("📋 Pareto: Alert por parámetro (Top 10)")
             alert_ser = pd.Series({col.replace('RESULT_',''):(df[col+'_status']=='Alert').sum() for col in result_cols}).sort_values(ascending=False).head(10)
@@ -212,5 +219,3 @@ if archivo:
                     st.pyplot(fig)
     except Exception as e:
         st.error(f"❌ Error al procesar archivo: {e}")
-
-
