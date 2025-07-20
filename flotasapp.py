@@ -191,5 +191,9 @@ if archivo:
             ax6_line.set_xlabel('Porcentaje acumulado')
             ax6_line.spines[['top','right']].set_visible(False)
             for x, y in zip(cum6.values, cum6.index):
-                ax6_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize
+                ax6_line.annotate(f"{x:.0f}%", (x, y), textcoords='offset points', xytext=(5,0), fontsize=8)
+            st.pyplot(fig6)
+
+    except Exception as e:
+        st.error(f"❌ Error al procesar archivo: {e}")
 
