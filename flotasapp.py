@@ -112,6 +112,35 @@ try:
         for i,v in enumerate(vals): ax.text(i,v+2,str(v),ha='center')
         st.pyplot(fig)
 
+        # ---------------------------------------------
+        # Histograma discreto por intervalos definidos por usuario
+        # ---------------------------------------------
+        st.subheader("📊 Distribución por intervalos")
+        # Selección de variable y número de intervalos
+        var_int = st.selectbox("Variable para intervalos:", valid_vars, key="var_int")
+        n_int = st.number_input("Número de intervalos:", min_value=2, max_value=50, value=5, step=1, key="n_int")
+        # Calcular rangos
+        serie = df[var_int].dropna()
+        min_v, max_v = serie.min(), serie.max()
+        bins = list(pd.interval_range(start=min_v, end=max_v, periods=n_int))
+        # Contar valores en cada intervalo
+        conteos = [serie.between(interval.left, interval.right, inclusive='left').sum() for interval in bins]
+        # Etiquetas legibles
+        labels = []
+        for i, interval in enumerate(bins):
+            if i == 0:
+                labels.append(f"< {interval.right:.2f}")
+            else:
+                labels.append(f"{interval.left:.2f} - {interval.right:.2f}")
+        # Gráfico de barras
+        fig_int, ax_int = plt.subplots(figsize=(6, 3))
+        ax_int.bar(labels, conteos, color=sns.color_palette('tab10', len(labels)))
+        ax_int.set_xlabel(var_int)
+        ax_int.set_ylabel('Conteo de muestras')
+        ax_int.set_xticklabels(labels, rotation=45, ha='right')
+        ax_int.set_title(f"Distribución de {var_int} en {n_int} intervalos")
+        st.pyplot(fig_int)
+
     # ---------------------------------------------
     # Histogramas por variable
     # ---------------------------------------------
@@ -261,6 +290,5 @@ try:
 except Exception as e:
     st.error(f"Error al procesar archivo: {e}")
     st.error(f"Error al procesar archivo: {e}")
-
 
 
