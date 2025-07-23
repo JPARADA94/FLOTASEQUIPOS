@@ -115,12 +115,15 @@ if st.session_state.analizado:
     )
     overall_mean = diffs.mean()
     st.markdown("### 🔎 Resumen general")
-    resumen_text = f"""
-- Total muestras (únicas): **{total}**
-- Equipos analizados: **{equipos}**
-- Rango de fechas: **{fecha_min}** a **{fecha_max}**
-- Intervalo medio entre muestras (días): **{overall_mean:.1f}**
-"""
+    resumen_text = (
+        f"- Total muestras (únicas): **{total}**
+"
+        f"- Equipos analizados: **{equipos}**
+"
+        f"- Rango de fechas: **{fecha_min}** a **{fecha_max}**
+"
+        f"- Intervalo medio entre muestras (días): **{overall_mean:.1f}**"
+    )
     st.markdown(resumen_text)
 
     # ---------------------------------------------
@@ -377,3 +380,4 @@ if st.session_state.analizado:
             fig.tight_layout(); st.pyplot(fig, use_container_width=True)
         else:
             st.warning(f"Selecciona exactamente {n} variables.")
+
