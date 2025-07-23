@@ -83,7 +83,9 @@ if st.button("🚀 Empezar análisis"):
             {"selector": "td", "props": [("padding", "8px"), ("border", "1px solid #ddd"), ("font-size", "13px"), ("text-align", "left")]},
             {"selector": "tr:nth-child(even)", "props": [("background-color", "#f9f9f9")]}
         ]
-        styled = tabla_map.style.set_table_styles(styles).hide_index()
+        # Convertir index en columna para evitar hide_index
+        tabla_df = tabla_map.reset_index()
+        styled = tabla_df.style.set_table_styles(styles)
         st.write(styled)
 
     # Fila 2: gráfico de estado de muestras
@@ -104,7 +106,6 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-
 
 
 
