@@ -258,3 +258,65 @@ if st.session_state.analizado:
             .format({'Promedio':'{:.0f}'})
         )
         st.write(styled_visc)
+        # ---------------------------------------------
+# Correlación de variables seleccionadas (Heatmap ajustado)
+numeric_cols = df.select_dtypes(include='number').columns.tolist()
+original_vars = [
+    'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
+    'Al (Aluminum)', 'Cr (Chromium)', 'Cu (Copper)', 'Fe (Iron)',
+    'Mo (Molybdenum)', 'Pb (Lead)', 'PQ Index', 'Oxidation (Ab/cm)',
+    'TBN (mg KOH/g)', 'Visc@100C (cSt)', 'TAN (mg KOH/g)', 'Fuel Dilut. (Vol%)',
+    'Nitration (Ab/cm)', 'Particle Count  >4um', 'Particle Count  >6um',
+    'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)'
+]
+valid_vars = [v for v in original_vars if v in numeric_cols]
+
+if not valid_vars:
+    st.warning("No hay variables numéricas válidas para correlación.")
+else:
+    st.markdown(
+        """
+        **Heatmap de correlación**: interpreta los coeficientes de Pearson.
+        - **1.0** = correlación positiva perfecta
+        - **0.0** = sin correlación lineal
+        - **-1.0** = correlación negativa perfecta
+        """
+    )
+    n = st.number_input(
+        "¿Cuántas variables quieres correlacionar?", min_value=2,
+        max_value=len(valid_vars), value=2, step=1
+    )
+    sel = st.multiselect(
+        "Selecciona las variables:", valid_vars,
+        default=valid_vars[:n]
+    )
+    if len(sel) == n:
+        # Limpieza y conversión
+        for col in sel:
+            df[col] = pd.to_numeric(
+                df[col].astype(str).str.replace(r"[^0-9\.\-]", "", regex=True),
+                errors='coerce'
+            )
+        corr = df[sel].corr()
+        size = max(4, n * 0.6)
+        annot_font = max(6, 14 - n)
+        fig7, ax7 = plt.subplots(figsize=(size, size))
+        sns.heatmap(
+            corr, annot=True, fmt='.2f', cmap='coolwarm',
+            annot_kws={'fontsize': annot_font}, linewidths=0.5,
+            square=True, ax=ax7
+        )
+        ax7.set_xticklabels(
+            ax7.get_xticklabels(), rotation=45,
+            ha='right', fontsize=annot_font
+        )
+        ax7.set_yticklabels(
+            ax7.get_yticklabels(), rotation=0,
+            fontsize=annot_font
+        )
+        ax7.set_title('Heatmap de correlación', fontsize=annot_font+2)
+        fig7.tight_layout()
+        st.pyplot(fig7, use_container_width=True)
+    else:
+        st.warning(f"Selecciona exactamente {n} variables.")
+
