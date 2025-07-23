@@ -196,7 +196,7 @@ if st.session_state['analyzed']:
                 'max':'Valor máximo'
             }
             stats_glob['Descripción'] = stats_glob.index.map(lambda idx: desc_map.get(idx, idx))
-            st.table(stats_glob[['Valor','Descripción']])(stats_glob[['Valor','Descripción']])
+            st.table(stats_glob[['Valor','Descripción']])
         else:
             st.warning(f"No hay datos numéricos para {sel_var}.")
 
@@ -207,3 +207,4 @@ if st.session_state['analyzed']:
             st.write(df_sub[sel_var].describe())
         else:
             st.warning("No hay registros con Alertas o Precauciones para esta variable.")
+
