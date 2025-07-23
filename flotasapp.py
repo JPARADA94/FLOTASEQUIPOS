@@ -184,24 +184,19 @@ if st.session_state['analyzed']:
         if sel_var in df.columns:
             # Estadísticas globales con descripción en español
             stats_glob = df[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
-            # Mapear descripciones dinámicamente
+            # Mapear descripciones dinámicamente según índices devueltos
             desc_map = {
-                'count':'Número de muestras', 'mean':'Media aritmética', 'std':'Desviación estándar',
-                'min':'Valor mínimo', '25%':'Primer cuartil (25%)', '50%':'Mediana (50%)',
-                '75%':'Tercer cuartil (75%)', 'max':'Valor máximo'
+                'count':'Número de muestras',
+                'mean':'Media aritmética',
+                'std':'Desviación estándar',
+                'min':'Valor mínimo',
+                '25%':'Primer cuartil (25%)',
+                '50%':'Mediana (50%)',
+                '75%':'Tercer cuartil (75%)',
+                'max':'Valor máximo'
             }
-            stats_glob['Descripción'] = stats_glob.index.map(desc_map)
-            stats_glob['Descripción'] = [
-                'Número de muestras',
-                'Media aritmética',
-                'Desviación estándar',
-                'Valor mínimo',
-                'Primer cuartil (25%)',
-                'Mediana (50%)',
-                'Tercer cuartil (75%)',
-                'Valor máximo'
-            ]
-            st.table(stats_glob[['Valor','Descripción']])
+            stats_glob['Descripción'] = stats_glob.index.map(lambda idx: desc_map.get(idx, idx))
+            st.table(stats_glob[['Valor','Descripción']])(stats_glob[['Valor','Descripción']])
         else:
             st.warning(f"No hay datos numéricos para {sel_var}.")
 
@@ -212,5 +207,3 @@ if st.session_state['analyzed']:
             st.write(df_sub[sel_var].describe())
         else:
             st.warning("No hay registros con Alertas o Precauciones para esta variable.")
-
-
