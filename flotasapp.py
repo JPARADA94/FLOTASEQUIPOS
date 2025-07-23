@@ -14,7 +14,7 @@ st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 st.title("📊 Análisis de Flotas - Mobil Serv")
 st.markdown("""
 Esta aplicación analiza datos de flotas con base en informes de Mobil Serv.
-Filtra por cuenta, clase de activo y lubricante, y luego pulsa "🚀 Empezar análisis".
+Filtra por cuenta, clase de activo, lubricante y fecha, y luego pulsa "🚀 Empezar análisis".
 """)
 
 # ========== Carga de archivo ==========
@@ -33,21 +33,31 @@ for col in required_cols:
 
 df_raw['Date Reported'] = pd.to_datetime(df_raw['Date Reported'], errors='coerce')
 
-# ========== Filtros ==========
-c1, c2, c3 = st.columns(3)
-with c1:
-    cuentas = st.multiselect("Selecciona cuenta(s)", df_raw['Account Name'].unique(), default=df_raw['Account Name'].unique())
-with c2:
-    clases = st.multiselect("Selecciona clase de activo", df_raw['Asset Class'].unique(), default=df_raw['Asset Class'].unique())
-with c3:
-    lubs = st.multiselect("Selecciona lubricante(s)", df_raw['Tested Lubricant'].unique(), default=df_raw['Tested Lubricant'].unique())
+# ========== Filtros uno por fila y por fecha ==========
+st.markdown("### 🎛️ Filtros de análisis")
+cuentas = st.multiselect("Selecciona cuenta(s)", df_raw['Account Name'].unique(), default=df_raw['Account Name'].unique())
+df_fil = df_raw[df_raw['Account Name'].isin(cuentas)]
 
-df = df_raw[
-    df_raw['Account Name'].isin(cuentas) &
-    df_raw['Asset Class'].isin(clases) &
-    df_raw['Tested Lubricant'].isin(lubs)
-].copy()
-if df.empty:
+clases = st.multiselect("Selecciona clase de activo", df_fil['Asset Class'].unique(), default=df_fil['Asset Class'].unique())
+df_fil = df_fil[df_fil['Asset Class'].isin(clases)]
+
+lubs = st.multiselect("Selecciona lubricante(s)", df_fil['Tested Lubricant'].unique(), default=df_fil['Tested Lubricant'].unique())
+df_fil = df_fil[df_fil['Tested Lubricant'].isin(lubs)]
+
+min_fecha = df_fil['Date Reported'].min()
+max_fecha = df_fil['Date Reported'].max()
+rango_fecha = st.checkbox("Filtrar por rango de fechas")
+if rango_fecha:
+    fecha_ini, fecha_fin = st.date_input(
+        "Selecciona rango de fechas:",
+        value=[min_fecha.date(), max_fecha.date()],
+        min_value=min_fecha.date(),
+        max_value=max_fecha.date()
+    )
+    df_fil = df_fil[(df_fil['Date Reported'] >= pd.to_datetime(fecha_ini)) &
+                    (df_fil['Date Reported'] <= pd.to_datetime(fecha_fin))]
+
+if df_fil.empty:
     st.warning("No hay datos con los filtros seleccionados.")
     st.stop()
 
@@ -62,7 +72,7 @@ if not st.session_state.get('analizado', False):
 
 # ========== Resumen General ==========
 st.markdown("### 🧾 Resumen general del análisis")
-df_nodup = df.drop_duplicates(subset='Sample Bottle ID')
+df_nodup = df_fil.drop_duplicates(subset='Sample Bottle ID')
 equipos_analizados = df_nodup['Asset ID'].nunique()
 fecha_min = df_nodup['Date Reported'].min().date()
 fecha_max = df_nodup['Date Reported'].max().date()
@@ -80,7 +90,7 @@ st.markdown(f"""
 st.markdown("---")
 
 # ========== 1ra fila: Muestras por cuenta ==========
-cnt = df['Account Name'].value_counts()
+cnt = df_fil['Account Name'].value_counts()
 df_cnt = cnt.reset_index()
 df_cnt.columns = ['Cuenta', 'Muestras']
 df_cnt['Letra'] = list(string.ascii_lowercase[:len(df_cnt)])
@@ -116,7 +126,7 @@ st.markdown("---")
 col3, col4 = st.columns(2)
 with col3:
     st.subheader("📊 Estado de muestras")
-    cnt2 = df['Report Status'].value_counts().reindex(['Normal','Caution','Alert'], fill_value=0)
+    cnt2 = df_fil['Report Status'].value_counts().reindex(['Normal','Caution','Alert'], fill_value=0)
     cmap2 = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
     fig2, ax2 = plt.subplots(figsize=(7,4))
     ax2.bar(cnt2.index, cnt2.values, color=[cmap2[s] for s in cnt2.index])
@@ -125,30 +135,32 @@ with col3:
     fig2.tight_layout(); st.pyplot(fig2, use_container_width=True)
 with col4:
     st.subheader("📈 Muestras por año y estado")
-    df['Año'] = df['Date Reported'].dt.year
-    pivot = df.pivot_table(index='Año', columns='Report Status', aggfunc='size', fill_value=0)
+    df_fil['Año'] = df_fil['Date Reported'].dt.year
+    pivot = df_fil.pivot_table(index='Año', columns='Report Status', aggfunc='size', fill_value=0)
     figyr, axy = plt.subplots(figsize=(7,4))
-    pivot[['Normal','Caution','Alert']].plot(kind='bar', stacked=True,
-                                             color=['#2ecc71','#f1c40f','#e74c3c'], ax=axy)
+    for col, color in zip(['Normal','Caution','Alert'],['#2ecc71','#f1c40f','#e74c3c']):
+        if col in pivot:
+            axy.bar(pivot.index, pivot[col], label=col, color=color, bottom=pivot[[c for c in ['Normal','Caution','Alert'] if c != col and c in pivot]].sum(axis=1) if col!='Normal' else 0)
     axy.set_ylabel('Nº muestras')
+    axy.legend()
     figyr.tight_layout(); st.pyplot(figyr, use_container_width=True)
 
 st.markdown("---")
 
 # ========== 3ra fila: Paretos ==========
 status_map = {'*':'Alert', '+':'Caution', '':'Normal'}
-for c in [col for col in df.columns if col.startswith('RESULT_')]:
-    df[c + '_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
+for c in [col for col in df_fil.columns if col.startswith('RESULT_')]:
+    df_fil[c + '_status'] = df_fil[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
 
 col5, col6 = st.columns(2)
 with col5:
     st.subheader("📋 Pareto de Alertas (Top 10)")
-    res_cols = [c for c in df.columns if c.startswith('RESULT_') and not c.endswith('_status')]
-    cnts = {c.replace('RESULT_',''): df[c + '_status'].eq('Alert').sum() for c in res_cols}
+    res_cols = [c for c in df_fil.columns if c.startswith('RESULT_') and not c.endswith('_status')]
+    cnts = {c.replace('RESULT_',''): df_fil[c + '_status'].eq('Alert').sum() for c in res_cols}
     ser = pd.Series(cnts).loc[lambda x: x>0].sort_values(ascending=False)
     top10 = ser.head(10) if len(ser) > 10 else ser
-    fig3, ax3 = plt.subplots(figsize=(7,4))
     etiquetas = [x.split('_')[-1] for x in top10.index]
+    fig3, ax3 = plt.subplots(figsize=(7,4))
     ax3.barh(etiquetas, top10.values, color='crimson')
     ax3.invert_yaxis(); ax3.set_xlabel('Nº Alertas')
     for i, v in enumerate(top10.values): ax3.text(v + 0.5, i, str(int(v)), va='center')
@@ -158,9 +170,9 @@ with col5:
     fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
 with col6:
     st.subheader("🔗 Pareto de combinaciones de fallas")
-    status_cols = [c for c in df.columns if c.endswith('_status')]
+    status_cols = [c for c in df_fil.columns if c.endswith('_status')]
     combos = {}
-    for _, row in df.iterrows():
+    for _, row in df_fil.iterrows():
         alerts = [c.replace('RESULT_','').replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
         for size in range(2, len(alerts) + 1):
             for combo in combinations(alerts, size):
@@ -194,24 +206,24 @@ desc_map = {
 stats_col1, stats_col2 = st.columns(2)
 with stats_col1:
     st.markdown("**Global**")
-    series_glob = pd.to_numeric(df[sel_var], errors='coerce')
+    series_glob = pd.to_numeric(df_fil[sel_var], errors='coerce')
     stats_glob = (series_glob.describe().round(0).fillna(0).astype(int)
                   .to_frame().rename(columns={sel_var:'Valor'}))
     stats_glob['Descripción'] = stats_glob.index.map(lambda i: desc_map.get(i, i))
     st.table(stats_glob[['Descripción','Valor']])
 with stats_col2:
     st.markdown("**Alert/Caution**")
-    df_sub = df[df[status_col].isin(['Alert','Caution'])]
+    df_sub = df_fil[df_fil[status_col].isin(['Alert','Caution'])]
     series_sub = pd.to_numeric(df_sub[sel_var], errors='coerce')
     stats_sub = (series_sub.describe().round(0).fillna(0).astype(int)
                   .to_frame().rename(columns={sel_var:'Valor'}))
     stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
     st.table(stats_sub[['Descripción','Valor']])
 
-# Tabla adicional para Visc@40C (cSt)
+# Tabla especial para Visc@40C (cSt)
 if sel_var == 'Visc@40C (cSt)':
     st.subheader("🛢️ Alertas/Precauciones por lubricante (Visc@40C)")
-    df_visc40 = df[df[status_col].isin(['Alert','Caution'])].copy()
+    df_visc40 = df_fil[df_fil[status_col].isin(['Alert','Caution'])].copy()
     df_visc40[sel_var] = pd.to_numeric(df_visc40[sel_var], errors='coerce')
     df_visc40 = (
         df_visc40
@@ -251,8 +263,7 @@ original_vars = [
     'Nitration (Ab/cm)', 'Particle Count  >4um', 'Particle Count  >6um',
     'Particle Count>14um', 'Visc@40C (cSt)', 'Soot (Wt%)'
 ]
-numeric_cols = df.select_dtypes(include='number').columns.tolist()
-valid_vars = [v for v in original_vars if v in df.columns]
+valid_vars = [v for v in original_vars if v in df_fil.columns]
 if not valid_vars:
     st.warning("No hay variables numéricas válidas para correlación.")
 else:
@@ -266,11 +277,11 @@ else:
     )
     if len(sel) == n:
         for col in sel:
-            df[col] = pd.to_numeric(
-                df[col].astype(str).str.replace(r"[^0-9\\.-]", "", regex=True),
+            df_fil[col] = pd.to_numeric(
+                df_fil[col].astype(str).str.replace(r"[^0-9\.\-]", "", regex=True),
                 errors='coerce'
             )
-        corr = df[sel].corr()
+        corr = df_fil[sel].corr()
         size = max(4, n * 0.6)
         annot_font = max(6, 14 - n)
         fig, ax = plt.subplots(figsize=(size, size))
@@ -285,5 +296,6 @@ else:
         fig.tight_layout(); st.pyplot(fig, use_container_width=True)
     else:
         st.warning(f"Selecciona exactamente {n} variables.")
+
 
 
