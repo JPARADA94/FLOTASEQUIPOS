@@ -95,7 +95,7 @@ if st.button("🚀 Empezar análisis"):
         st.write(styled)
 
     # Fila 2: gráfico de estado de muestras
-    r2c1, _ = st.columns([2, 3])
+    r2c1, r2c2 = st.columns([3, 2])
     with r2c1:
         st.subheader("📊 Estados de muestras")
         status_order = ['Normal', 'Caution', 'Alert']
@@ -112,5 +112,3 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-
-
