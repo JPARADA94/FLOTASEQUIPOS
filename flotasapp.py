@@ -130,8 +130,8 @@ if st.button("🚀 Empezar análisis"):
     lubs = df['Tested Lubricant'].nunique()
     ops = df['Account Name'].nunique()
     equipos = df['Unit ID'].nunique()
-    fechas = df['Date Reported'].agg(['min', 'max'])
-    fechas = fechas.min.date(), fechas.max.date()
+    fecha_min = df['Date Reported'].min().date()
+    fecha_max = df['Date Reported'].max().date()
     df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
     mean_int = df_sorted.groupby('Unit ID')['Date Reported'].diff().dt.days.mean()
 
@@ -184,4 +184,5 @@ if st.button("🚀 Empezar análisis"):
     # ... resto de filas ...
 else:
     st.info("Configura los filtros y haz clic en '🚀 Empezar análisis' para ver resultados.")
+
 
