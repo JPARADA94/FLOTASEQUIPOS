@@ -94,21 +94,36 @@ if st.button("🚀 Empezar análisis"):
         )
         st.write(styled)
 
-    # Fila 2: gráfico de estado de muestras
+        # Fila 2: Pareto de fallas (Alert + Caution)
     r2c1, r2c2 = st.columns([3, 2])
     with r2c1:
-        st.subheader("📊 Estados de muestras")
-        status_order = ['Normal', 'Caution', 'Alert']
-        cnt2 = df['Report Status'].value_counts().reindex(status_order, fill_value=0)
-        color_map = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
-        fig2, ax2 = plt.subplots(figsize=(8, 4))
-        ax2.bar(cnt2.index, cnt2.values, color=[color_map[s] for s in cnt2.index])
-        for i, v in enumerate(cnt2.values):
-            ax2.text(i, v + cnt2.values.max()*0.01, str(v), ha='center')
-        ax2.set_xlabel('Estado')
-        ax2.set_ylabel('Cantidad de muestras')
-        fig2.tight_layout()
-        st.pyplot(fig2)
+        st.subheader("📋 Pareto de fallas (Alert + Precaución)")
+        # Parámetros de resultado
+        status_cols = [c for c in df.columns if c.endswith('_status')]
+        counts = {}
+        for sc in status_cols:
+            param = sc.replace('_status','')
+            counts[param] = ((df[sc] == 'Alert') | (df[sc] == 'Caution')).sum()
+        pareto = pd.Series(counts).sort_values(ascending=False).head(10)
+        fig3, ax3 = plt.subplots(figsize=(8, 4))
+        ax3.barh(pareto.index, pareto.values)
+        ax3.invert_yaxis()
+        ax3.set_xlabel('Número de fallas')
+        for i, v in enumerate(pareto.values):
+            ax3.text(v + pareto.values.max()*0.01, i, str(v), va='center')
+        # Línea de % acumulado
+        cum = pareto.cumsum() / pareto.sum() * 100
+        ax3_line = ax3.twiny()
+        ax3_line.plot(cum.values, range(len(cum)), '-o')
+        ax3_line.set_xlabel('% acumulado')
+        for i, p in enumerate(cum):
+            ax3_line.text(p + 2, i, f"{p:.0f}%", va='center')
+        fig3.tight_layout()
+        st.pyplot(fig3)
+    # Columna derecha vacía o para futuros contenidos
+
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
