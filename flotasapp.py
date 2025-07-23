@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import string
+from itertools import combinations
 
 # Mapeo de símbolos a estados
 status_map = {'*': 'Alert', '+': 'Caution', '': 'Normal'}
@@ -148,7 +149,7 @@ if st.button("🚀 Empezar análisis"):
     status_cols = [c for c in df.columns if c.endswith('_status')]
     combos = {}
     for _, row in df.iterrows():
-        alerts = [c.replace('_status','') for c in status_cols if row[c] == 'Alert']
+        alerts = [c.replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
         if len(alerts) >= combo_size:
             for combo in combinations(alerts, combo_size):
                 key = ' & '.join(combo)
@@ -171,6 +172,7 @@ if st.button("🚀 Empezar análisis"):
         st.pyplot(fig_c, use_container_width=True)
 
 else:
+    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
 
 
