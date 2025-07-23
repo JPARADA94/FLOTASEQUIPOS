@@ -118,23 +118,23 @@ if st.button("🚀 Empezar análisis"):
         fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
 
     # Fila 3: Pareto de combinaciones de fallas
+        # Fila 3: Pareto de combinaciones de fallas (automático, tamaño 2+)
     c5, c6 = st.columns(2)
     with c5:
         st.subheader("🔗 Pareto de combinaciones de fallas")
-        combo_size = st.selectbox("Tamaño de combinación:", [2,3,4], key="combo_size")
         status_cols = [c for c in df.columns if c.endswith('_status')]
         combos = {}
         for _, row in df.iterrows():
             alerts = [c.replace('RESULT_','').replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
-            if len(alerts) >= combo_size:
-                for combo in combinations(alerts, combo_size):
-                    parts = [p.split()[0] for p in combo]
-                    key = ' & '.join(parts)
+            # Generar combos de tamaño 2 o más
+            for size in range(2, len(alerts)+1):
+                for combo in combinations(alerts, size):
+                    key = ' & '.join(combo)
                     combos[key] = combos.get(key, 0) + 1
         comb_ser = pd.Series(combos).loc[lambda x: x>0].sort_values(ascending=False)
         topc = comb_ser.head(10) if len(comb_ser)>10 else comb_ser
         if topc.empty:
-            st.warning(f"No hay combinaciones de tamaño {combo_size}.")
+            st.warning("No hay combinaciones de Alertas/Precauciones.")
         else:
             fig4, ax4 = plt.subplots(figsize=(8,4))
             ax4.barh(topc.index, topc.values, color='#8e44ad'); ax4.invert_yaxis(); ax4.set_xlabel('Número de muestras')
@@ -147,6 +147,7 @@ if st.button("🚀 Empezar análisis"):
         pass
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
 
