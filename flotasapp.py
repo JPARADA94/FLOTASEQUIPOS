@@ -67,7 +67,7 @@ if st.button("🚀 Empezar análisis"):
     r1c1, r1c2 = st.columns([3, 2])
     with r1c1:
         st.subheader("📊 Muestras por cuenta")
-        fig, ax = plt.subplots(figsize=(5, 5))
+        fig, ax = plt.subplots(figsize=(8, 4))
         ax.bar(df_cnt['Letra'], df_cnt['Muestras'], color=colors)
         for i, v in enumerate(df_cnt['Muestras']):
             ax.text(i, v + df_cnt['Muestras'].max()*0.01, str(v), ha='center')
@@ -101,7 +101,7 @@ if st.button("🚀 Empezar análisis"):
         status_order = ['Normal', 'Caution', 'Alert']
         cnt2 = df['Report Status'].value_counts().reindex(status_order, fill_value=0)
         color_map = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
-        fig2, ax2 = plt.subplots(figsize=(5, 5))
+        fig2, ax2 = plt.subplots(figsize=(8, 4))
         ax2.bar(cnt2.index, cnt2.values, color=[color_map[s] for s in cnt2.index])
         for i, v in enumerate(cnt2.values):
             ax2.text(i, v + cnt2.values.max()*0.01, str(v), ha='center')
@@ -112,4 +112,5 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
