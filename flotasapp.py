@@ -83,9 +83,18 @@ if st.button("🚀 Empezar análisis"):
             {"selector": "td", "props": [("padding", "8px"), ("border", "1px solid #ddd"), ("font-size", "13px"), ("text-align", "left")]},
             {"selector": "tr:nth-child(even)", "props": [("background-color", "#f9f9f9")]}
         ]
-        # Convertir index en columna para evitar hide_index
+        # Convertir index en columna para evitar hide_index y agregar porcentaje
         tabla_df = tabla_map.reset_index()
+        tabla_df['% Muestras'] = (tabla_df['Muestras'] / tabla_df['Muestras'].sum() * 100).round(1).astype(str) + '%'
+        # Estilizar tabla con pandas Styler
+        styles = [
+            {"selector": "th", "props": [("background-color", "#4f81bd"), ("color", "white"), ("font-size", "14px"), ("text-align", "left")]},
+            {"selector": "td", "props": [("padding", "8px"), ("border", "1px solid #ddd"), ("font-size", "13px"), ("text-align", "left")]},
+            {"selector": "tr:nth-child(even)", "props": [("background-color", "#f9f9f9")]}
+        ]
         styled = tabla_df.style.set_table_styles(styles)
+        # Resaltar la columna de porcentaje con degradado de color
+        styled = styled.format({'% Muestras': '{:>'+'5s'}).background_gradient(column=['% Muestras'], cmap='Blues')
         st.write(styled)
 
     # Fila 2: gráfico de estado de muestras
@@ -106,6 +115,7 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
 
