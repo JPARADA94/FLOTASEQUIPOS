@@ -253,7 +253,7 @@ if st.session_state.analizado:
             df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']]
             .style
             .set_table_styles(styles_visc)
-            .hide_index()
+            
             .background_gradient(subset=['# Alertas/Precauciones'], cmap='Oranges')
             .format({'Promedio':'{:.0f}'})
         )
