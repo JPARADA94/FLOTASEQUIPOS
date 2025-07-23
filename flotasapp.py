@@ -182,38 +182,7 @@ if st.session_state.analizado:
             fig4.tight_layout(); st.pyplot(fig4, use_container_width=True)
 
         # ---------------------------------------------
-    # Heatmap de correlación
-    st.subheader("🌡️ Heatmap de correlación")
-    # Selección de variables para heatmap
-    num_cols = df.select_dtypes(include='number').columns.tolist()
-    valid_cols = [v for v in num_cols if v in df.columns]
-    n = st.number_input(
-        "¿Cuántas variables quieres correlacionar?", min_value=2,
-        max_value=len(valid_cols), value=2, step=1
-    )
-    sel_vars = st.multiselect(
-        "Selecciona las variables:", valid_cols, default=valid_cols[:n]
-    )
-    if len(sel_vars) == n:
-        corr = df[sel_vars].corr()
-        size = max(4, n * 0.6)
-        annot_font = max(6, 14 - n)
-        fig_ht, ax_ht = plt.subplots(figsize=(size, size))
-        sns.heatmap(
-            corr, annot=True, fmt='.2f', cmap='coolwarm',
-            annot_kws={'fontsize': annot_font}, linewidths=0.5,
-            square=True, ax=ax_ht
-        )
-        ax_ht.set_xticklabels(ax_ht.get_xticklabels(), rotation=45, ha='right', fontsize=annot_font)
-        ax_ht.set_yticklabels(ax_ht.get_yticklabels(), rotation=0, fontsize=annot_font)
-        ax_ht.set_title('Heatmap de correlación', fontsize=annot_font+2)
-        fig_ht.tight_layout()
-        st.pyplot(fig_ht, use_container_width=True)
-    else:
-        st.warning(f"Selecciona exactamente {n} variables.")
-
-    # ---------------------------------------------
-    # Estadísticas por variable
+# Estadísticas por variable
     # ---------------------------------------------
     st.subheader("🔍 Análisis por variable")
     pareto_vars = top10.index.tolist()
