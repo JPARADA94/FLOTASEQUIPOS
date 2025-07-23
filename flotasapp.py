@@ -93,6 +93,21 @@ if not st.session_state.analizado:
 # 7. Bloque de análisis
 # =====================
 if st.session_state.analizado:
+    # ---------------------------------------------
+    # 7.0 Resumen general
+    # ---------------------------------------------
+    total = len(df)
+    fecha_min = df['Date Reported'].min().date()
+    fecha_max = df['Date Reported'].max().date()
+    df_sorted = df.sort_values(['Unit ID','Date Reported'])
+    mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
+    overall_mean = mean_int.mean()
+    st.markdown("### 🔎 Resumen general")
+    st.markdown(f"- Total muestras: **{total}**  \
+- Rango de fechas: **{fecha_min}** a **{fecha_max}**  \
+- Intervalo medio entre muestras (días): **{overall_mean:.1f}**")
+
+    # ---------------------------------------------
 
     # --------------------------------
     # 7.1 Fila 1: Muestras por cuenta
@@ -309,5 +324,3 @@ if st.session_state.analizado:
             fig.tight_layout(); st.pyplot(fig, use_container_width=True)
         else:
             st.warning(f"Selecciona exactamente {n} variables.")
-
-
