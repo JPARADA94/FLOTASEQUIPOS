@@ -182,9 +182,22 @@ if st.session_state['analyzed']:
     with s1:
         st.markdown("*Global*")
         if sel_var in df.columns:
-            st.write(df[sel_var].describe())
+            # Estadísticas globales con descripción en español
+            stats_glob = df[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
+            stats_glob['Descripción'] = [
+                'Número de muestras',
+                'Media aritmética',
+                'Desviación estándar',
+                'Valor mínimo',
+                'Primer cuartil (25%)',
+                'Mediana (50%)',
+                'Tercer cuartil (75%)',
+                'Valor máximo'
+            ]
+            st.table(stats_glob[['Valor','Descripción']])
         else:
             st.warning(f"No hay datos numéricos para {sel_var}.")
+
     with s2:
         st.markdown("*Alert/Caution*")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
@@ -192,3 +205,4 @@ if st.session_state['analyzed']:
             st.write(df_sub[sel_var].describe())
         else:
             st.warning("No hay registros con Alertas o Precauciones para esta variable.")
+
