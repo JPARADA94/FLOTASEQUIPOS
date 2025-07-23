@@ -1,7 +1,6 @@
 # flotasapp.py
 # Autor: Javier Parada
 # Fecha de creación: 2025-07-23
-# Análisis visual y estadístico de datos de flotas Mobil Serv
 
 import streamlit as st
 import pandas as pd
@@ -124,6 +123,15 @@ st.markdown("---")
 
 # ========== 2da fila: Estado y muestras por año ==========
 col3, col4 = st.columns(2)
+with col3:
+    st.subheader("📊 Estado de muestras")
+    cnt2 = df_fil['Report Status'].value_counts().reindex(['Normal','Caution','Alert'], fill_value=0)
+    cmap2 = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
+    fig2, ax2 = plt.subplots(figsize=(7,4))
+    ax2.bar(cnt2.index, cnt2.values, color=[cmap2[s] for s in cnt2.index])
+    for i, v in enumerate(cnt2.values): ax2.text(i, v + 0.5, str(int(v)), ha='center')
+    ax2.set_xlabel('Estado'); ax2.set_ylabel('Nº muestras')
+    fig2.tight_layout(); st.pyplot(fig2, use_container_width=True)
 with col4:
     st.subheader("📈 Muestras por año")
     yearly = df_fil['Date Reported'].dt.year.value_counts().sort_index()
@@ -287,6 +295,3 @@ else:
         fig.tight_layout(); st.pyplot(fig, use_container_width=True)
     else:
         st.warning(f"Selecciona exactamente {n} variables.")
-
-
-
