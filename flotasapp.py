@@ -71,11 +71,7 @@ if st.button("🚀 Empezar análisis"):
         ax.bar(df_cnt['Letra'], df_cnt['Muestras'], color=colors)
         for i, v in enumerate(df_cnt['Muestras']):
             ax.text(i, v + df_cnt['Muestras'].max()*0.01, str(v), ha='center')
-        handles = [plt.Rectangle((0, 0), 1, 1, color=colors[i]) for i in range(len(df_cnt))]
-        labels = [f"{l}: {c}" for l, c in zip(df_cnt['Letra'], df_cnt['Cuenta'])]
-        ax.legend(handles, labels, title='Cuentas', loc='upper right', fontsize='small', title_fontsize='small')
-        ax.set_xlabel('Cuenta')
-        ax.set_ylabel('Número de muestras')
+        # Eliminar leyenda interna, tabla a la derecha cubre el mapeo
         fig.tight_layout()
         st.pyplot(fig)
     with r1c2:
@@ -102,6 +98,7 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
 
