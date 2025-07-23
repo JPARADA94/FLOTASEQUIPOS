@@ -124,26 +124,17 @@ st.markdown("---")
 
 # ========== 2da fila: Estado y muestras por año ==========
 col3, col4 = st.columns(2)
-with col3:
-    st.subheader("📊 Estado de muestras")
-    cnt2 = df_fil['Report Status'].value_counts().reindex(['Normal','Caution','Alert'], fill_value=0)
-    cmap2 = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
-    fig2, ax2 = plt.subplots(figsize=(7,4))
-    ax2.bar(cnt2.index, cnt2.values, color=[cmap2[s] for s in cnt2.index])
-    for i, v in enumerate(cnt2.values): ax2.text(i, v + 0.5, str(int(v)), ha='center')
-    ax2.set_xlabel('Estado'); ax2.set_ylabel('Nº muestras')
-    fig2.tight_layout(); st.pyplot(fig2, use_container_width=True)
 with col4:
-    st.subheader("📈 Muestras por año y estado")
-    df_fil['Año'] = df_fil['Date Reported'].dt.year
-    pivot = df_fil.pivot_table(index='Año', columns='Report Status', aggfunc='size', fill_value=0)
+    st.subheader("📈 Muestras por año")
+    yearly = df_fil['Date Reported'].dt.year.value_counts().sort_index()
     figyr, axy = plt.subplots(figsize=(7,4))
-    for col, color in zip(['Normal','Caution','Alert'],['#2ecc71','#f1c40f','#e74c3c']):
-        if col in pivot:
-            axy.bar(pivot.index, pivot[col], label=col, color=color, bottom=pivot[[c for c in ['Normal','Caution','Alert'] if c != col and c in pivot]].sum(axis=1) if col!='Normal' else 0)
+    axy.bar(yearly.index.astype(str), yearly.values, color='steelblue')
+    for i, v in enumerate(yearly.values):
+        axy.text(i, v + 0.5, str(int(v)), ha='center')
+    axy.set_xlabel('Año')
     axy.set_ylabel('Nº muestras')
-    axy.legend()
-    figyr.tight_layout(); st.pyplot(figyr, use_container_width=True)
+    figyr.tight_layout()
+    st.pyplot(figyr, use_container_width=True)
 
 st.markdown("---")
 
