@@ -169,3 +169,19 @@ if st.session_state.analizado:
         ss.columns=['Valor']
         ss['Descripción']=ss.index.map(lambda i: desc_map.get(i,i))
         st.table(ss[['Descripción','Valor']])
+        # Tabla adicional para Visc@40C (cSt)
+        if sel_var == 'Visc@40C (cSt)':
+            st.subheader("🛢️ Alertas/Precauciones por lubricante (Visc@40C)")
+            df_visc40 = df[df[status_col].isin(['Alert','Caution'])]
+            df_visc40 = df_visc40.groupby('Tested Lubricant')[sel_var].agg(
+                Count='count',
+                Mean='mean'
+            ).reset_index()
+            df_visc40['Mean'] = df_visc40['Mean'].round(0).astype(int)
+            df_visc40['Count'] = df_visc40['Count'].astype(int)
+            df_visc40 = df_visc40.rename(columns={
+                'Tested Lubricant':'Lubricante',
+                'Count':'# Alertas/Precauciones',
+                'Mean':'Promedio'
+            })
+            st.table(df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']])
