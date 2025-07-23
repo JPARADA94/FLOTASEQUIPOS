@@ -186,7 +186,9 @@ if st.session_state['analyzed']:
     s1, s2 = st.columns(2)
     with s1:
         st.markdown("**Global**")
-        stats_glob = df[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
+        # Convertir a numérico limpiando y describir
+        s_glob = pd.to_numeric(df[sel_var], errors='coerce')
+        stats_glob = s_glob.describe().to_frame().rename(columns={sel_var:'Valor'})().rename(columns={sel_var:'Valor'})
         stats_glob['Valor'] = stats_glob['Valor'].round(0).fillna(0).astype(int)
         desc_map = {
             'count':'Número de muestras','mean':'Media aritmética','std':'Desviación estándar',
@@ -197,7 +199,9 @@ if st.session_state['analyzed']:
     with s2:
         st.markdown("**Alert/Caution**")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
-        stats_sub = df_sub[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
+        # Convertir a numérico y describir
+        s_sub = pd.to_numeric(df_sub[sel_var], errors='coerce')
+        stats_sub = s_sub.describe().to_frame().rename(columns={sel_var:'Valor'})().rename(columns={sel_var:'Valor'})
         stats_sub['Valor'] = stats_sub['Valor'].round(0).fillna(0).astype(int)
         stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_sub[['Descripción','Valor']])
