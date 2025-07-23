@@ -288,6 +288,7 @@ if st.session_state.analizado:
     # ==================================================
     # 10. Correlación de variables seleccionadas (Heatmap)
     # ==================================================
+    st.subheader("🔍 Mapa de calor")
     numeric_cols = df.select_dtypes(include='number').columns.tolist()
     original_vars = [
         'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
