@@ -179,33 +179,30 @@ if st.session_state['analyzed']:
     # Estadísticas en dos columnas
     st.markdown("**Comparativa global vs Alert/Caution**")
     s1, s2 = st.columns(2)
-    with s1:
+        with s1:
         st.markdown("*Global*")
-        if sel_var in df.columns:
-            # Estadísticas globales con descripción en español
-            stats_glob = df[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
-            # Mapear descripciones dinámicamente según índices devueltos
-            desc_map = {
-                'count':'Número de muestras',
-                'mean':'Media aritmética',
-                'std':'Desviación estándar',
-                'min':'Valor mínimo',
-                '25%':'Primer cuartil (25%)',
-                '50%':'Mediana (50%)',
-                '75%':'Tercer cuartil (75%)',
-                'max':'Valor máximo'
-            }
-            stats_glob['Descripción'] = stats_glob.index.map(lambda idx: desc_map.get(idx, idx))
-            st.table(stats_glob[['Valor','Descripción']])
-        else:
-            st.warning(f"No hay datos numéricos para {sel_var}.")
+        # Estadísticas globales con descripción en español y valores enteros
+        stats_glob = df[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
+        stats_glob['Valor'] = stats_glob['Valor'].round(0).fillna(0).astype(int)
+        desc_map = {
+            'count':'Número de muestras',
+            'mean':'Media aritmética',
+            'std':'Desviación estándar',
+            'min':'Valor mínimo',
+            '25%':'Primer cuartil (25%)',
+            '50%':'Mediana (50%)',
+            '75%':'Tercer cuartil (75%)',
+            'max':'Valor máximo'
+        }
+        stats_glob['Descripción'] = stats_glob.index.map(lambda i: desc_map.get(i, i))
+        # Mostrar solo Descripción y Valor
+        st.table(stats_glob[['Descripción','Valor']])
 
-    with s2:
+        with s2:
         st.markdown("*Alert/Caution*")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
-        if sel_var in df_sub.columns and not df_sub.empty:
-            st.write(df_sub[sel_var].describe())
-        else:
-            st.warning("No hay registros con Alertas o Precauciones para esta variable.")
-
-
+        # Estadísticas segmentadas con descripción y enteros
+        stats_sub = df_sub[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
+        stats_sub['Valor'] = stats_sub['Valor'].round(0).fillna(0).astype(int)
+        stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
+        st.table(stats_sub[['Descripción','Valor']])
