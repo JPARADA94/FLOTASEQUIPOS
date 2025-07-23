@@ -165,13 +165,14 @@ if st.button("🚀 Empezar análisis"):
         ax1.set_ylabel('Número de muestras')
         for i, v in enumerate(df_cuenta['Muestras']):
             ax1.text(i, v + max(df_cuenta['Muestras'])*0.01, str(v), ha='center')
-        # Agregar leyenda de letras a cuentas
+        # Agregar leyenda dentro del gráfico para mantener altura uniforme
         handles = []
         labels = []
         for i, letra in enumerate(df_cuenta['Letra']):
             handles.append(plt.Rectangle((0,0),1,1,color=colores[i]))
             labels.append(f"{letra}: {df_cuenta['Cuenta'].iloc[i]}")
-        ax1.legend(handles, labels, title="Cuentas", bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax1.legend(handles, labels, title="Cuentas", loc='upper right', fontsize='small', title_fontsize='small')
+        fig1.tight_layout()
         st.pyplot(fig1)
 
     with r1c2:
@@ -188,3 +189,4 @@ if st.button("🚀 Empezar análisis"):
     # ... resto de filas ...
 else:
     st.info("Configura los filtros y haz clic en '🚀 Empezar análisis' para ver resultados.")
+
