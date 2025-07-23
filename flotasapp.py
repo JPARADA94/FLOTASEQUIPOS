@@ -140,8 +140,39 @@ if st.button("🚀 Empezar análisis"):
         ax2.set_ylabel('Cantidad de muestras')
         fig2.tight_layout()
         st.pyplot(fig2, use_container_width=True)
+    # Fila 3: Pareto de combinaciones de Alertas
+    st.subheader("🔗 Pareto: combinaciones de alertas")
+    # Selección de tamaño de combinación
+    combo_size = st.selectbox("Selecciona tamaño de combinación:", [2, 3, 4], index=0)
+    # Columnas de estado de alertas
+    status_cols = [c for c in df.columns if c.endswith('_status')]
+    combos = {}
+    for _, row in df.iterrows():
+        alerts = [c.replace('_status','') for c in status_cols if row[c] == 'Alert']
+        if len(alerts) >= combo_size:
+            for combo in combinations(alerts, combo_size):
+                key = ' & '.join(combo)
+                combos[key] = combos.get(key, 0) + 1
+    comb_ser = pd.Series(combos).sort_values(ascending=False)
+    # Filtrar ceros y top 10
+    comb_ser = comb_ser[comb_ser > 0]
+    if len(comb_ser) > 10:
+        comb_ser = comb_ser.head(10)
+    if comb_ser.empty:
+        st.warning(f"No hay combinaciones de tamaño {combo_size} con alertas.")
+    else:
+        fig_c, ax_c = plt.subplots(figsize=(8, 4))
+        ax_c.barh(comb_ser.index, comb_ser.values, color='purple')
+        ax_c.invert_yaxis()
+        ax_c.set_xlabel('Número de muestras')
+        for i, v in enumerate(comb_ser.values):
+            ax_c.text(v + comb_ser.max()*0.01, i, str(v), va='center')
+        fig_c.tight_layout()
+        st.pyplot(fig_c, use_container_width=True)
+
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
 
