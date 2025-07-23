@@ -76,9 +76,15 @@ if st.button("🚀 Empezar análisis"):
         st.pyplot(fig)
     with r1c2:
         st.subheader("📋 Cuentas asignadas")
-        # Mostrar sólo el mapeo letra -> Cuenta, sin columnas de conteo
         tabla_map = df_cnt[['Letra', 'Cuenta']].set_index('Letra')
-        st.table(tabla_map)
+        # Estilizar tabla con pandas Styler
+        styles = [
+            {"selector": "th", "props": [("background-color", "#4f81bd"), ("color", "white"), ("font-size", "14px"), ("text-align", "left")]},
+            {"selector": "td", "props": [("padding", "8px"), ("border", "1px solid #ddd"), ("font-size", "13px"), ("text-align", "left")]},
+            {"selector": "tr:nth-child(even)", "props": [("background-color", "#f9f9f9")]}
+        ]
+        styled = tabla_map.style.set_table_styles(styles).hide_index()
+        st.write(styled)
 
     # Fila 2: gráfico de estado de muestras
     r2c1, _ = st.columns([2, 3])
