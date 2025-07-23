@@ -125,7 +125,7 @@ if st.button("🚀 Empezar análisis"):
         status_cols = [c for c in df.columns if c.endswith('_status')]
         combos = {}
         for _, row in df.iterrows():
-            alerts = [c.replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
+            alerts = [c.replace('RESULT_','').replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
             if len(alerts) >= combo_size:
                 for combo in combinations(alerts, combo_size):
                     parts = [p.split()[0] for p in combo]
@@ -147,5 +147,6 @@ if st.button("🚀 Empezar análisis"):
         pass
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
