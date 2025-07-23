@@ -97,32 +97,27 @@ if st.button("🚀 Empezar análisis"):
         )
         st.write(styled)
 
-                        # Fila 2: Pareto de alertas (Top 10)
+                                # Fila 2: Pareto de Alertas (Top 10) y Estados de muestras
     r2c1, r2c2 = st.columns([3, 2])
     with r2c1:
         st.subheader("📋 Pareto de Alertas (Top 10)")
-        # Solo Alert
         result_cols = [c for c in df.columns if c.startswith('RESULT_')]
         counts = {}
         for c in result_cols:
             status_col = c + '_status'
-            # Asegurar que exista la columna de estado
             df[status_col] = df.get(status_col, df[c].astype(str).str.strip().map(status_map))
-            counts[c.replace('RESULT_', '')] = (df[status_col] == 'Alert').sum()
+            counts[c.replace('RESULT_','')] = (df[status_col] == 'Alert').sum()
         ser = pd.Series(counts)
-        # Filtrar ceros y tomar top 10 o menos
-        ser = ser[ser>0]
+        ser = ser[ser > 0]
         top = ser.sort_values(ascending=False)
         if len(top) > 10:
             top = top.head(10)
-        # Graficar Pareto
         fig_p, ax_p = plt.subplots(figsize=(8, 4))
         ax_p.barh(top.index, top.values, color='crimson')
         ax_p.invert_yaxis()
         ax_p.set_xlabel('Número de Alertas')
         for i, v in enumerate(top.values):
             ax_p.text(v + top.max()*0.01, i, str(v), va='center')
-        # Curva acumulada
         cum = top.cumsum() / top.sum() * 100
         axp_line = ax_p.twiny()
         axp_line.plot(cum.values, range(len(cum)), '-o', color='black')
@@ -130,7 +125,8 @@ if st.button("🚀 Empezar análisis"):
         for i, p in enumerate(cum):
             axp_line.text(p + 1, i, f"{p:.0f}%", va='center')
         fig_p.tight_layout()
-        st.pyplot(fig_p)
+        st.pyplot(fig_p, use_container_width=True)
+
     with r2c2:
         st.subheader("📊 Estados de muestras")
         status_order = ['Normal', 'Caution', 'Alert']
@@ -145,7 +141,9 @@ if st.button("🚀 Empezar análisis"):
         fig2.tight_layout()
         st.pyplot(fig2, use_container_width=True)
 else:
-    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+  
+
 
 
 
