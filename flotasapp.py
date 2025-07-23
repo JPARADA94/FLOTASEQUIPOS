@@ -92,7 +92,9 @@ if st.button("🚀 Empezar análisis"):
     c3, c4 = st.columns([3,2])
     with c3:
         st.subheader("📋 Pareto de Alertas (Top 10)")
-        counts = {c.replace('RESULT_',''): (df[c+'_status']=='Alert').sum() for c in df.columns if c.startswith('RESULT_')}
+        # Obtener solo columnas originales RESULT_
+        result_cols = [c for c in df.columns if c.startswith('RESULT_') and not c.endswith('_status')]
+        counts = {c.replace('RESULT_',''): (df[c+'_status']=='Alert').sum() for c in result_cols}
         ser = pd.Series(counts); ser = ser[ser>0].sort_values(ascending=False)
         top = ser.head(10) if len(ser)>10 else ser
         fig2, ax2 = plt.subplots(figsize=(8,4))
@@ -139,3 +141,4 @@ if st.button("🚀 Empezar análisis"):
 
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
