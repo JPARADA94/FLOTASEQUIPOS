@@ -117,7 +117,7 @@ if st.button("🚀 Empezar análisis"):
         ax3.set_xlabel('Estado'); ax3.set_ylabel('Cantidad de muestras')
         fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
 
-        # Fila 3: Pareto de combinaciones (Alert + Caution)
+        # Fila 3: Pareto de combinaciones de fallas (Alert + Caution)
     st.subheader("🔗 Pareto de combinaciones de fallas")
     combo_size = st.selectbox("Tamaño de combinación:", [2, 3, 4], key="combo_size")
     status_cols = [c for c in df.columns if c.endswith('_status')]
@@ -126,7 +126,6 @@ if st.button("🚀 Empezar análisis"):
         alerts = [c.replace('_status','') for c in status_cols if row[c] in ['Alert', 'Caution']]
         if len(alerts) >= combo_size:
             for combo in combinations(alerts, combo_size):
-                # Abreviar nombres: tomar primer token
                 parts = [p.split()[0] for p in combo]
                 key = ' & '.join(parts)
                 combos[key] = combos.get(key, 0) + 1
@@ -141,7 +140,7 @@ if st.button("🚀 Empezar análisis"):
         ax4.invert_yaxis()
         ax4.set_xlabel('Número de muestras')
         for i, v in enumerate(topc.values):
-            ax4.text(v*1.01, i, str(v), va='center')
+            ax4.text(v * 1.01, i, str(v), va='center')
         cum = topc.cumsum() / topc.sum() * 100
         ax4_line = ax4.twiny()
         ax4_line.plot(cum.values, range(len(cum)), '-o', color='black')
