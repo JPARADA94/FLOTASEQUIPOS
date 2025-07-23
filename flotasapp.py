@@ -15,11 +15,13 @@ from itertools import combinations
 # ---------------------------------------------
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 st.title("📊 Análisis de Flotas - Mobil Serv")
-st.markdown("""
-Esta aplicación analiza datos de flotas en formato Mobil Serv.
-Filtra cuentas, clases de equipo y lubricantes, y genera gráficos y estadísticas.
-Todos los valores numéricos se muestran como enteros.
-""")
+st.markdown(
+    """
+    Esta aplicación analiza datos de flotas en formato Mobil Serv.
+    Filtra cuentas, clases de equipo y lubricantes, y genera gráficos y estadísticas.
+    Todos los valores numéricos se muestran como enteros.
+    """
+)
 
 # ---------------------------------------------
 # Estado de análisis
@@ -34,13 +36,11 @@ archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
 if not archivo:
     st.stop()
 raw = pd.read_excel(archivo)
-
 cols_req = ['Account Name','Asset Class','Tested Lubricant','Report Status','Date Reported']
 for col in cols_req:
     if col not in raw.columns:
         st.error(f"Falta columna: {col}")
         st.stop()
-
 raw['Date Reported'] = pd.to_datetime(raw['Date Reported'], errors='coerce')
 
 # ---------------------------------------------
@@ -85,7 +85,6 @@ for c in [c for c in df.columns if c.startswith('RESULT_')]:
 # ---------------------------------------------
 if st.button("🚀 Empezar análisis"):
     st.session_state.analizado = True
-
 if not st.session_state.analizado:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
 
@@ -105,8 +104,7 @@ if st.session_state.analizado:
         st.subheader("📊 Muestras por cuenta")
         fig, ax = plt.subplots(figsize=(8,4))
         ax.bar(df_cnt['Letra'], df_cnt['Muestras'], color=pal)
-        for i,v in enumerate(df_cnt['Muestras']):
-            ax.text(i, v + 0.5, str(int(v)), ha='center')
+        for i,v in enumerate(df_cnt['Muestras']): ax.text(i, v+0.5, str(int(v)), ha='center')
         ax.set_xlabel('Cuenta'); ax.set_ylabel('Nº muestras')
         fig.tight_layout(); st.pyplot(fig, use_container_width=True)
     with c2:
@@ -133,8 +131,7 @@ if st.session_state.analizado:
         cmap2 = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
         fig2, ax2 = plt.subplots(figsize=(8,4))
         ax2.bar(s_cnt.index, s_cnt.values, color=[cmap2[s] for s in s_cnt.index])
-        for i, v in enumerate(s_cnt.values):
-            ax2.text(i, v + 0.5, str(int(v)), ha='center')
+        for i,v in enumerate(s_cnt.values): ax2.text(i, v+0.5, str(int(v)), ha='center')
         ax2.set_xlabel('Estado'); ax2.set_ylabel('Nº muestras')
         fig2.tight_layout(); st.pyplot(fig2, use_container_width=True)
     with c4:
@@ -142,8 +139,7 @@ if st.session_state.analizado:
         yearly = df['Date Reported'].dt.year.value_counts().sort_index()
         figyr, axy = plt.subplots(figsize=(8,4))
         axy.bar(yearly.index.astype(str), yearly.values, color='steelblue')
-        for i, v in enumerate(yearly.values):
-            axy.text(i, v + 0.5, str(int(v)), ha='center')
+        for i,v in enumerate(yearly.values): axy.text(i, v+0.5, str(int(v)), ha='center')
         axy.set_xlabel('Año'); axy.set_ylabel('Nº muestras')
         figyr.tight_layout(); st.pyplot(figyr, use_container_width=True)
 
@@ -157,18 +153,16 @@ if st.session_state.analizado:
         top10 = ser.head(10) if len(ser)>10 else ser
         fig3, ax3 = plt.subplots(figsize=(8,4))
         ax3.barh(top10.index, top10.values, color='crimson'); ax3.invert_yaxis(); ax3.set_xlabel('Nº Alertas')
-        for i, v in enumerate(top10.values):
-            ax3.text(v + 0.5, i, str(int(v)), va='center')
+        for i,v in enumerate(top10.values): ax3.text(v+0.5, i, str(int(v)), va='center')
         cum = top10.cumsum()/top10.sum()*100
         ln = ax3.twiny(); ln.plot(cum.values, range(len(cum)), '-o', color='black'); ln.set_xlabel('% acumulado')
-        for i, p in enumerate(cum):
-            ln.text(p+1, i, f"{int(p)}%", va='center')
+        for i,p in enumerate(cum): ln.text(p+1, i, f"{int(p)}%", va='center')
         fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
     with c6:
         st.subheader("🔗 Pareto de combinaciones de fallas")
         st_cols = [c for c in df.columns if c.endswith('_status')]
         combos = {}
-        for _, r in df.iterrows():
+        for _,r in df.iterrows():
             alerts = [c.replace('RESULT_','').replace('_status','') for c in st_cols if r[c] in ['Alert','Caution']]
             for n in range(2, len(alerts)+1):
                 for combo in combinations(alerts, n):
@@ -181,12 +175,10 @@ if st.session_state.analizado:
         else:
             fig4, ax4 = plt.subplots(figsize=(8,4))
             ax4.barh(topc.index, topc.values, color='#8e44ad'); ax4.invert_yaxis(); ax4.set_xlabel('Nº muestras')
-            for i, v in enumerate(topc.values):
-                ax4.text(v + 0.5, i, str(int(v)), va='center')
+            for i,v in enumerate(topc.values): ax4.text(v+0.5, i, str(int(v)), va='center')
             cum2 = topc.cumsum()/topc.sum()*100
             ln2 = ax4.twiny(); ln2.plot(cum2.values, range(len(cum2)), '-o', color='black'); ln2.set_xlabel('% acumulado')
-            for i, p in enumerate(cum2):
-                ln2.text(p+1, i, f"{int(p)}%", va='center')
+            for i,p in enumerate(cum2): ln2.text(p+1, i, f"{int(p)}%", va='center')
             fig4.tight_layout(); st.pyplot(fig4, use_container_width=True)
 
     # ---------------------------------------------
@@ -197,7 +189,7 @@ if st.session_state.analizado:
     sel_var = st.selectbox("Selecciona variable de Pareto:", pareto_vars)
     status_col = f"RESULT_{sel_var}_status"
 
-    # Descripciones
+    # Diccionario de descripciones
     desc_map = {
         'count':'Número de muestras','mean':'Media aritmética','std':'Desviación estándar',
         'min':'Valor mínimo','25%':'Primer cuartil','50%':'Mediana','75%':'Tercer cuartil','max':'Valor máximo'
@@ -207,21 +199,39 @@ if st.session_state.analizado:
     with s1:
         st.markdown("**Global**")
         s_glob = pd.to_numeric(df[sel_var], errors='coerce')
-        stats_glob = s_glob.describe().round(0).fillna(0).astype(int).to_frame().rename(columns={sel_var:'Valor'})
+        stats_glob = (
+            s_glob
+            .describe()
+            .round(0)
+            .fillna(0)
+            .astype(int)
+            .to_frame()
+            .rename(columns={sel_var:'Valor'})
+        )
         stats_glob['Descripción'] = stats_glob.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_glob[['Descripción','Valor']])
     with s2:
         st.markdown("**Alert/Caution**")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
         s_sub = pd.to_numeric(df_sub[sel_var], errors='coerce')
-        stats_sub = s_sub.describe().round(0).fillna(0).astype(int).to_frame().rename(columns={sel_var:'Valor'})
+        stats_sub = (
+            s_sub
+            .describe()
+            .round(0)
+            .fillna(0)
+            .astype(int)
+            .to_frame()
+            .rename(columns={sel_var:'Valor'})
+        )
         stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_sub[['Descripción','Valor']])
 
         # Tabla adicional para Visc@40C (cSt)
         if sel_var == 'Visc@40C (cSt)':
             st.subheader("🛢️ Alertas/Precauciones por lubricante (Visc@40C)")
-            df_visc40 = df[df[status_col].isin(['Alert','Caution'])]
+            df_visc40 = df[df[status_col].isin(['Alert','Caution'])].copy()
+            # Convertir a numérico antes de agrupar
+            df_visc40[sel_var] = pd.to_numeric(df_visc40[sel_var], errors='coerce')
             df_visc40 = (
                 df_visc40
                 .groupby('Tested Lubricant')[sel_var]
@@ -235,3 +245,4 @@ if st.session_state.analizado:
                 .rename(columns={'Tested Lubricant':'Lubricante'})
             )
             st.table(df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']])
+
