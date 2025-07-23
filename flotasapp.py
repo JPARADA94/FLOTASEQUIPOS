@@ -184,6 +184,13 @@ if st.session_state['analyzed']:
         if sel_var in df.columns:
             # Estadísticas globales con descripción en español
             stats_glob = df[sel_var].describe().to_frame().rename(columns={sel_var:'Valor'})
+            # Mapear descripciones dinámicamente
+            desc_map = {
+                'count':'Número de muestras', 'mean':'Media aritmética', 'std':'Desviación estándar',
+                'min':'Valor mínimo', '25%':'Primer cuartil (25%)', '50%':'Mediana (50%)',
+                '75%':'Tercer cuartil (75%)', 'max':'Valor máximo'
+            }
+            stats_glob['Descripción'] = stats_glob.index.map(desc_map)
             stats_glob['Descripción'] = [
                 'Número de muestras',
                 'Media aritmética',
@@ -205,4 +212,5 @@ if st.session_state['analyzed']:
             st.write(df_sub[sel_var].describe())
         else:
             st.warning("No hay registros con Alertas o Precauciones para esta variable.")
+
 
