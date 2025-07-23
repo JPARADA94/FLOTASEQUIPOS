@@ -141,8 +141,8 @@ if st.button("🚀 Empezar análisis"):
         fig2.tight_layout()
         st.pyplot(fig2, use_container_width=True)
 else:
-    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-  
+    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
 
