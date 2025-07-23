@@ -196,13 +196,28 @@ if st.session_state['analyzed']:
         }
         stats_glob['Descripción'] = stats_glob.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_glob[['Descripción','Valor']])
-    with s2:
+        with s2:
         st.markdown("**Alert/Caution**")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
-        # Convertir a numérico y describir
-        s_sub = pd.to_numeric(df_sub[sel_var], errors='coerce')
-        stats_sub = s_sub.describe().to_frame().rename(columns={sel_var:'Valor'}).rename(columns={sel_var:'Valor'})
+        # Estadísticas para Alert/Caution
+        stats_sub = pd.to_numeric(df_sub[sel_var], errors='coerce').describe().to_frame().rename(columns={sel_var:'Valor'})
         stats_sub['Valor'] = stats_sub['Valor'].round(0).fillna(0).astype(int)
         stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_sub[['Descripción','Valor']])
+        # Tabla adicional para Visc@100C (cSt)
+        if sel_var == 'Visc@100C (cSt)':
+            st.subheader("🛢️ Alertas/Precauciones por lubricante (Viscosidad)")
+            df_visc = df[df[status_col].isin(['Alert','Caution'])]
+            df_visc = df_visc.groupby('Tested Lubricant')[sel_var] \
+                        .agg(N_Alertas_Cautions='count', Promedio='mean') \
+                        .reset_index()
+            df_visc['Promedio'] = df_visc['Promedio'].round(0).astype(int)
+            df_visc['N_Alertas_Cautions'] = df_visc['N_Alertas_Cautions'].astype(int)
+            df_visc = df_visc.rename(columns={
+                'Tested Lubricant':'Lubricante',
+                'N_Alertas_Cautions':'# Alertas/Precauciones',
+                'Promedio':'Promedio'
+            })
+            st.table(df_visc[['Lubricante','# Alertas/Precauciones','Promedio']])
+
 
