@@ -129,7 +129,7 @@ if st.button("🚀 Empezar análisis"):
         alerts = [c.replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
         if len(alerts) >= combo_size:
             for combo in combinations(alerts, combo_size):
-                parts = [p.split()[0] for p in combo]
+                parts = [p.replace('RESULT_','') for p in combo]
                 key = ' & '.join(parts)
                 combos[key] = combos.get(key, 0) + 1
     comb_ser = pd.Series(combos).loc[lambda x: x>0].sort_values(ascending=False)
@@ -150,3 +150,4 @@ if st.button("🚀 Empezar análisis"):
 
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
