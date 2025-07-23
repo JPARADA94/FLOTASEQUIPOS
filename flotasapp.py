@@ -289,5 +289,3 @@ if st.session_state.analizado:
             .format({'Promedio':'{:.0f}'})
         )
         st.write(styled_visc)
-
-
