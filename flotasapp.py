@@ -68,7 +68,7 @@ if st.button("🚀 Empezar análisis"):
     df_cnt['Letra'] = list(string.ascii_lowercase[:len(df_cnt)])
     colors = sns.color_palette('tab10', len(df_cnt))
 
-    col1, col2 = st.columns([3,2])
+    col1, col2 = st.columns(2)  # columnas iguales
     with col1:
         st.subheader("📊 Muestras por cuenta")
         fig, ax = plt.subplots(figsize=(8,4))
@@ -93,7 +93,7 @@ if st.button("🚀 Empezar análisis"):
         st.write(styled)
 
     # --- Fila 2: Pareto de Alertas + Estados de muestras ---
-    col3, col4 = st.columns([3,2])
+    col3, col4 = st.columns(2)  # columnas iguales
     with col3:
         st.subheader("📋 Pareto de Alertas (Top 10)")
         result_cols = [c for c in df.columns if c.startswith('RESULT_') and not c.endswith('_status')]
