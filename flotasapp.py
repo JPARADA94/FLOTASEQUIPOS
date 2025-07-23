@@ -83,7 +83,8 @@ if not archivo:
 
 df_raw = pd.read_excel(archivo)
 
-# Validar columnas faltantes\ nmissing_cols = sorted(set(columnas_esperadas) - set(df_raw.columns))
+# Validar columnas faltantes
+missing_cols = sorted(set(columnas_esperadas) - set(df_raw.columns))
 if missing_cols:
     st.error("❌ Faltan columnas en el archivo:")
     st.code("\n".join(missing_cols))
@@ -242,5 +243,3 @@ if st.button("🚀 Empezar análisis"):
         st.pyplot(fig6)
 else:
     st.info("Configura los filtros y haz clic en '🚀 Empezar análisis' para ver resultados.")
-
-
