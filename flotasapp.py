@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import string
 
+# Mapeo de símbolos a estados
+status_map = {'*': 'Alert', '+': 'Caution', '': 'Normal'}
+
 # ---------------------------------------------
 # Título e instrucciones
 # ---------------------------------------------
