@@ -97,26 +97,33 @@ if st.button("🚀 Empezar análisis"):
         )
         st.write(styled)
 
-                    # Fila 2: Pareto de fallas (Top 15) y Estados de muestras
+                        # Fila 2: Pareto de alertas (Top 10)
     r2c1, r2c2 = st.columns([3, 2])
     with r2c1:
-        st.subheader("📋 Pareto de fallas (Top 15)")
+        st.subheader("📋 Pareto de Alertas (Top 10)")
+        # Solo Alert
         result_cols = [c for c in df.columns if c.startswith('RESULT_')]
         counts = {}
         for c in result_cols:
             status_col = c + '_status'
-            if status_col not in df.columns:
-                df[status_col] = df[c].astype(str).str.strip().map(status_map)
-            param = c.replace('RESULT_','')
-            counts[param] = ((df[status_col] == 'Alert') | (df[status_col] == 'Caution')).sum()
-        top15 = pd.Series(counts).sort_values(ascending=False).head(15)
+            # Asegurar que exista la columna de estado
+            df[status_col] = df.get(status_col, df[c].astype(str).str.strip().map(status_map))
+            counts[c.replace('RESULT_', '')] = (df[status_col] == 'Alert').sum()
+        ser = pd.Series(counts)
+        # Filtrar ceros y tomar top 10 o menos
+        ser = ser[ser>0]
+        top = ser.sort_values(ascending=False)
+        if len(top) > 10:
+            top = top.head(10)
+        # Graficar Pareto
         fig_p, ax_p = plt.subplots(figsize=(8, 4))
-        ax_p.barh(top15.index, top15.values, color='skyblue')
+        ax_p.barh(top.index, top.values, color='crimson')
         ax_p.invert_yaxis()
-        ax_p.set_xlabel('Número de fallas')
-        for i, v in enumerate(top15.values):
-            ax_p.text(v + top15.max()*0.01, i, str(v), va='center')
-        cum = top15.cumsum() / top15.sum() * 100
+        ax_p.set_xlabel('Número de Alertas')
+        for i, v in enumerate(top.values):
+            ax_p.text(v + top.max()*0.01, i, str(v), va='center')
+        # Curva acumulada
+        cum = top.cumsum() / top.sum() * 100
         axp_line = ax_p.twiny()
         axp_line.plot(cum.values, range(len(cum)), '-o', color='black')
         axp_line.set_xlabel('% acumulado')
@@ -139,7 +146,5 @@ if st.button("🚀 Empezar análisis"):
         st.pyplot(fig2)
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+  
+
