@@ -97,29 +97,32 @@ if st.button("🚀 Empezar análisis"):
             # Fila 2: Pareto de fallas y estados de muestras
     r2c1, r2c2 = st.columns([3, 2])
     with r2c1:
-        st.subheader("📋 Pareto de fallas (Alert + Precaución)")
-        # Contar Alert y Caution para cada parámetro
-        status_cols = [c for c in df.columns if c.endswith('_status')]
+        st.subheader("📋 Pareto de fallas (Top 15)")
+        # Identificar columnas de resultados
+        result_cols = [c for c in df.columns if c.startswith('RESULT_')]
+        # Contar Alert (*) y Caution (+) para cada parámetro
         counts = {}
-        for sc in status_cols:
-            # Filtrar CU específico si necesario: aquí contamos todos
-            param = sc.replace('_status', '')
-            counts[param] = ((df[sc] == 'Alert') | (df[sc] == 'Caution')).sum()
-        pareto = pd.Series(counts).sort_values(ascending=False).head(10)
-        fig_p, axp = plt.subplots(figsize=(8, 4))
-        axp.barh(pareto.index, pareto.values)
-        axp.invert_yaxis()
-        axp.set_xlabel('Número de fallas')
+        for c in result_cols:
+            param = c.replace('RESULT_','')
+            # Mapear valores originales si existen, o usar status
+            counts[param] = ((df[c+'_status'] == 'Alert') | (df[c+'_status'] == 'Caution')).sum()
+        # Top 15 parámetros con más fallas
+        top15 = pd.Series(counts).sort_values(ascending=False).head(15)
+        # Graficar Pareto
+        fig_p, ax_p = plt.subplots(figsize=(8, 4))
+        ax_p.barh(top15.index, top15.values)
+        ax_p.invert_yaxis()
+        ax_p.set_xlabel('Número de fallas')
         # Etiquetas de valor
-        for i, v in enumerate(pareto.values):
-            axp.text(v + pareto.max()*0.01, i, str(v), va='center')
-        # Línea acumulada
-        cum = pareto.cumsum() / pareto.sum() * 100
-        axp_line = axp.twiny()
-        axp_line.plot(cum.values, range(len(cum)), '-o')
-        axp_line.set_xlabel('% acumulado')
+        for i, v in enumerate(top15.values):
+            ax_p.text(v + top15.max()*0.01, i, str(v), va='center')
+        # Curva de porcentaje acumulado
+        cum = top15.cumsum() / top15.sum() * 100
+        ax_p2 = ax_p.twiny()
+        ax_p2.plot(cum.values, range(len(cum)), '-o')
+        ax_p2.set_xlabel('% acumulado')
         for i, p in enumerate(cum):
-            axp_line.text(p + 2, i, f"{p:.0f}%", va='center')
+            ax_p2.text(p + 1, i, f"{p:.0f}%", va='center')
         fig_p.tight_layout()
         st.pyplot(fig_p)
     with r2c2:
@@ -140,5 +143,3 @@ else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-
-
