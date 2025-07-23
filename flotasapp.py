@@ -208,3 +208,4 @@ if st.session_state['analyzed']:
         else:
             st.warning("No hay registros con Alertas o Precauciones para esta variable.")
 
+
