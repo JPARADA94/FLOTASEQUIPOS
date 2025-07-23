@@ -117,22 +117,41 @@ if st.button("🚀 Empezar análisis"):
         ax3.set_xlabel('Estado'); ax3.set_ylabel('Cantidad de muestras')
         fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
 
-    # Fila 3: Pareto de combinaciones (Alert+Caution)
-    st.subheader("🔗 Pareto: combinaciones de Alertas y Precaución")
-    combo_size = st.selectbox("Tamaño de combinación:", [2,3,4], index=0)
-    combos = {}
+        # Fila 3: Pareto de combinaciones (Alert + Caution)
+    st.subheader("🔗 Pareto de combinaciones de fallas")
+    combo_size = st.selectbox("Tamaño de combinación:", [2, 3, 4], key="combo_size")
     status_cols = [c for c in df.columns if c.endswith('_status')]
-    for _,row in df.iterrows():
-        alerts = [c.replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
-        if len(alerts)>=combo_size:
+    combos = {}
+    for _, row in df.iterrows():
+        alerts = [c.replace('_status','') for c in status_cols if row[c] in ['Alert', 'Caution']]
+        if len(alerts) >= combo_size:
             for combo in combinations(alerts, combo_size):
-                key=' & '.join(combo)
-                combos[key]=combos.get(key,0)+1
-    comb_ser = pd.Series(combos); comb_ser=comb_ser[comb_ser>0].sort_values(ascending=False)
-    topc = comb_ser.head(10) if len(comb_ser)>10 else comb_ser
+                # Abreviar nombres: tomar primer token
+                parts = [p.split()[0] for p in combo]
+                key = ' & '.join(parts)
+                combos[key] = combos.get(key, 0) + 1
+    comb_ser = pd.Series(combos)
+    comb_ser = comb_ser[comb_ser > 0].sort_values(ascending=False)
+    topc = comb_ser.head(10) if len(comb_ser) > 10 else comb_ser
     if topc.empty:
-        st.warning(f"Sin combinaciones de tamaño {combo_size}.")
+        st.warning(f"No hay combinaciones de tamaño {combo_size}.")
     else:
+        fig4, ax4 = plt.subplots(figsize=(8, 4))
+        ax4.barh(topc.index, topc.values, color='#8e44ad')
+        ax4.invert_yaxis()
+        ax4.set_xlabel('Número de muestras')
+        for i, v in enumerate(topc.values):
+            ax4.text(v*1.01, i, str(v), va='center')
+        cum = topc.cumsum() / topc.sum() * 100
+        ax4_line = ax4.twiny()
+        ax4_line.plot(cum.values, range(len(cum)), '-o', color='black')
+        ax4_line.set_xlabel('% acumulado')
+        for i, p in enumerate(cum):
+            ax4_line.text(p + 1, i, f"{p:.0f}%", va='center')
+        fig4.tight_layout()
+        st.pyplot(fig4, use_container_width=True)
+else:
+    st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
         fig4, ax4 = plt.subplots(figsize=(8,4))
         ax4.barh(topc.index, topc.values, color='purple')
         ax4.invert_yaxis(); ax4.set_xlabel('Número de muestras')
