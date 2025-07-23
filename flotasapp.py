@@ -76,23 +76,22 @@ if st.button("🚀 Empezar análisis"):
         st.pyplot(fig)
     with r1c2:
         st.subheader("📋 Cuentas asignadas")
-        tabla_map = df_cnt[['Letra', 'Cuenta']].set_index('Letra')
-        # Estilizar tabla con pandas Styler
+        # Usar df_cnt para incluir Muestras y calcular porcentaje
+        tabla_df = df_cnt[['Letra', 'Cuenta', 'Muestras']].copy()
+        tabla_df['% Muestras'] = (tabla_df['Muestras'] / tabla_df['Muestras'].sum() * 100).round(1)
+        # Estilos de tabla
         styles = [
             {"selector": "th", "props": [("background-color", "#4f81bd"), ("color", "white"), ("font-size", "14px"), ("text-align", "left")]},
             {"selector": "td", "props": [("padding", "8px"), ("border", "1px solid #ddd"), ("font-size", "13px"), ("text-align", "left")]},
             {"selector": "tr:nth-child(even)", "props": [("background-color", "#f9f9f9")]}
         ]
-        # Convertir index en columna para evitar hide_index y agregar porcentaje
-        tabla_df = tabla_map.reset_index()
-                # Crear columna numérica de porcentaje
-        tabla_df['% Muestras'] = (tabla_df['Muestras'] / tabla_df['Muestras'].sum() * 100).round(1)
-        # Estilizar tabla
-        styled = tabla_df.style.set_table_styles(styles)
-        # Aplicar degradado a la columna numérica
-        styled = styled.background_gradient(subset=['% Muestras'], cmap='Blues')
-        # Formatear la columna como porcentaje
-        styled = styled.format({'% Muestras': '{:.1f}%'} )
+        # Aplicar estilos y degradado
+        styled = (
+            tabla_df.style
+            .set_table_styles(styles)
+            .background_gradient(subset=['% Muestras'], cmap='Blues')
+            .format({'% Muestras': '{:.1f}%'} )
+        )
         st.write(styled)
 
     # Fila 2: gráfico de estado de muestras
@@ -113,9 +112,3 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-
-
-
-
-
-
