@@ -117,7 +117,6 @@ seleccion_lub = st.multiselect("Selecciona el/los lubricante(s):", lubricantes, 
 if not seleccion_lub:
     st.warning("Debes seleccionar al menos un lubricante.")
     st.stop()
-
 df = df_clases[df_clases['Tested Lubricant'].isin(seleccion_lub)].copy()
 
 # ---------------------------------------------
@@ -133,7 +132,7 @@ if st.button("🚀 Empezar análisis"):
     for c in result_cols:
         df[c + '_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
 
-    # Métricas generales
+    # Métricas generales (solo tarjetas)
     total = len(df)
     lubs = df['Tested Lubricant'].nunique()
     ops = df['Account Name'].nunique()
@@ -144,34 +143,32 @@ if st.button("🚀 Empezar análisis"):
     mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
     overall_mean = mean_int.mean()
 
-    # Resumen general
     st.subheader("🔎 Resumen general")
-    st.markdown(f"""
-- Total muestras: **{total}**  
-- Lubricantes distintos: **{lubs}**  
-- Operaciones distintas: **{ops}**  
-- Rango de fechas: **{fecha_min}** a **{fecha_max}**  
-- Equipos distintos: **{equipos}**  
-- Intervalo medio de muestreo: **{overall_mean:.1f}** días
-"""
-    )
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total muestras", total)
-    c2.metric("Equipos analizados", equipos)
-    c3.metric("Lubricantes distintos", lubs)
-    c4.metric("Intervalo medio (días)", f"{overall_mean:.1f}")
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric("Total muestras", total)
+    m2.metric("Lubricantes distintos", lubs)
+    m3.metric("Operaciones distintas", ops)
+    m4.metric("Equipos distintos", equipos)
+    m5.metric("Intervalo medio (días)", f"{overall_mean:.1f}")
 
     # ---------------------------------------------
     # Gráficos fila 1: Muestras por cuenta y estados
     # ---------------------------------------------
     r1c1, r1c2 = st.columns(2)
     with r1c1:
-        st.subheader("🍰 Muestras por cuenta")
+        st.subheader("📊 Muestras por cuenta")
         cuenta_counts = df['Account Name'].value_counts()
+        # Barra y tabla resumen
         fig1, ax1 = plt.subplots(figsize=(4, 3))
-        ax1.pie(cuenta_counts.values, labels=cuenta_counts.index, autopct='%1.1f%%', startangle=90, wedgeprops={'edgecolor':'white'})
-        ax1.axis('equal')
+        ax1.bar(cuenta_counts.index, cuenta_counts.values)
+        ax1.set_ylabel('Número de muestras')
+        ax1.set_xticklabels(cuenta_counts.index, rotation=45, ha='right')
+        for i, v in enumerate(cuenta_counts.values):
+            ax1.text(i, v + cuenta_counts.values.max()*0.01, str(v), ha='center')
         st.pyplot(fig1)
+        # Tabla resumen
+        table_cuentas = pd.DataFrame({'Cuenta': cuenta_counts.index, 'Muestras': cuenta_counts.values})
+        st.table(table_cuentas)
     with r1c2:
         st.subheader("📊 Estados de muestras")
         status_counts = df['Report Status'].value_counts().reindex(['Normal', 'Caution', 'Alert']).fillna(0)
@@ -180,10 +177,10 @@ if st.button("🚀 Empezar análisis"):
         ax2.bar(status_counts.index, status_counts.values, color=[colors[s] for s in status_counts.index])
         ax2.set_ylabel('Cantidad de muestras')
         for i, v in enumerate(status_counts.values):
-            ax2.text(i, v + max(status_counts.values)*0.01, str(int(v)), ha='center')
+            ax2.text(i, v + status_counts.values.max()*0.01, str(int(v)), ha='center')
         st.pyplot(fig2)
 
-    # Aquí continuarían los gráficos de filas 2 y 3...
+    # Aquí seguirían las demás filas de gráficos (intervalos, pareto, etc.)
+
 else:
     st.info("Configura los filtros y haz clic en '🚀 Empezar análisis' para ver resultados.")
-
