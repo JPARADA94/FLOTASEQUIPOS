@@ -94,46 +94,38 @@ if st.button("🚀 Empezar análisis"):
         )
         st.write(styled)
 
-            # Fila 2: Pareto de fallas y estados de muestras
+                # Fila 2: Pareto de fallas (Top 15)
     r2c1, r2c2 = st.columns([3, 2])
     with r2c1:
         st.subheader("📋 Pareto de fallas (Top 15)")
-        # Identificar columnas de resultados
-        result_cols = [c for c in df.columns if c.startswith('RESULT_')]
-        # Contar Alert (*) y Caution (+) para cada parámetro
+        status_cols = [col for col in df.columns if col.endswith('_status')]
         counts = {}
-        for c in result_cols:
-            param = c.replace('RESULT_','')
-            # Mapear valores originales si existen, o usar status
-            counts[param] = ((df[c+'_status'] == 'Alert') | (df[c+'_status'] == 'Caution')).sum()
-        # Top 15 parámetros con más fallas
+        for sc in status_cols:
+            param = sc.replace('RESULT_','').replace('_status','')
+            counts[param] = ((df[sc] == 'Alert') | (df[sc] == 'Caution')).sum()
         top15 = pd.Series(counts).sort_values(ascending=False).head(15)
-        # Graficar Pareto
         fig_p, ax_p = plt.subplots(figsize=(8, 4))
-        ax_p.barh(top15.index, top15.values)
+        ax_p.barh(top15.index, top15.values, color='skyblue')
         ax_p.invert_yaxis()
         ax_p.set_xlabel('Número de fallas')
-        # Etiquetas de valor
         for i, v in enumerate(top15.values):
             ax_p.text(v + top15.max()*0.01, i, str(v), va='center')
-        # Curva de porcentaje acumulado
         cum = top15.cumsum() / top15.sum() * 100
-        ax_p2 = ax_p.twiny()
-        ax_p2.plot(cum.values, range(len(cum)), '-o')
-        ax_p2.set_xlabel('% acumulado')
+        axp_line = ax_p.twiny()
+        axp_line.plot(cum.values, range(len(cum)), '-o', color='black')
+        axp_line.set_xlabel('% acumulado')
         for i, p in enumerate(cum):
-            ax_p2.text(p + 1, i, f"{p:.0f}%", va='center')
+            axp_line.text(p + 1, i, f"{p:.0f}%", va='center')
         fig_p.tight_layout()
         st.pyplot(fig_p)
     with r2c2:
         st.subheader("📊 Estados de muestras")
-        status_order = ['Normal', 'Caution', 'Alert']
+        status_order = ['Normal','Caution','Alert']
         cnt2 = df['Report Status'].value_counts().reindex(status_order, fill_value=0)
         cmap = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
         fig2, ax2 = plt.subplots(figsize=(8, 4))
         ax2.bar(cnt2.index, cnt2.values, color=[cmap[s] for s in cnt2.index])
-        for i, v in enumerate(cnt2.values):
-            ax2.text(i, v + cnt2.max()*0.01, str(v), ha='center')
+        for i, v in enumerate(cnt2.values): ax2.text(i, v + cnt2.max()*0.01, str(v), ha='center')
         ax2.set_xlabel('Estado')
         ax2.set_ylabel('Cantidad de muestras')
         fig2.tight_layout()
@@ -143,3 +135,4 @@ else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
