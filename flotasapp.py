@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import combinations
+import string
 
 # ---------------------------------------------
 # Configuración de la página
@@ -82,7 +83,6 @@ if not archivo:
     st.stop()
 
 df_raw = pd.read_excel(archivo)
-# Validar columnas faltantes
 missing_cols = sorted(set(columnas_esperadas) - set(df_raw.columns))
 if missing_cols:
     st.error("❌ Faltan columnas en el archivo:")
@@ -90,97 +90,98 @@ if missing_cols:
     st.stop()
 
 # ---------------------------------------------
-# Paso 2: Selección de cuenta(s)
+# Paso 2: Selección de filtros básicos
 # ---------------------------------------------
 cuentas = df_raw['Account Name'].unique().tolist()
-seleccion_cuentas = st.multiselect("Selecciona la(s) cuenta(s) a analizar:", cuentas, default=cuentas)
+seleccion_cuentas = st.multiselect("Selecciona la(s) cuenta(s):", cuentas, default=cuentas)
 if not seleccion_cuentas:
-    st.warning("Debes seleccionar al menos una cuenta.")
+    st.warning("Selecciona al menos una cuenta.")
     st.stop()
-df_cuentas = df_raw[df_raw['Account Name'].isin(seleccion_cuentas)].copy()
+df_cuentas = df_raw[df_raw['Account Name'].isin(seleccion_cuentas)]
 
-# ---------------------------------------------
-# Paso 3: Selección de clase(s) de equipo
-# ---------------------------------------------
 clases = df_cuentas['Asset Class'].unique().tolist()
-seleccion_clases = st.multiselect("Selecciona la(s) clase(s) de equipo:", clases, default=clases)
+seleccion_clases = st.multiselect("Selecciona clase(s) de equipo:", clases, default=clases)
 if not seleccion_clases:
-    st.warning("Debes seleccionar al menos una clase de equipo.")
+    st.warning("Selecciona al menos una clase.")
     st.stop()
-df_clases = df_cuentas[df_cuentas['Asset Class'].isin(seleccion_clases)].copy()
+df_clases = df_cuentas[df_cuentas['Asset Class'].isin(seleccion_clases)]
 
-# ---------------------------------------------
-# Paso 4: Selección de lubricante(s)
-# ---------------------------------------------
 lubricantes = df_clases['Tested Lubricant'].unique().tolist()
-seleccion_lub = st.multiselect("Selecciona el/los lubricante(s):", lubricantes, default=lubricantes)
+seleccion_lub = st.multiselect("Selecciona lubricante(s):", lubricantes, default=lubricantes)
 if not seleccion_lub:
-    st.warning("Debes seleccionar al menos un lubricante.")
+    st.warning("Selecciona al menos un lubricante.")
     st.stop()
-df = df_clases[df_clases['Tested Lubricant'].isin(seleccion_lub)].copy()
+df = df_clases[df_clases['Tested Lubricant'].isin(seleccion_lub)]
 
 # ---------------------------------------------
-# Paso 5: Botón para iniciar análisis
+# Paso final: Análisis
 # ---------------------------------------------
 if st.button("🚀 Empezar análisis"):
-    # Preparar datos
     df['Date Reported'] = pd.to_datetime(df['Date Reported'], errors='coerce')
     for col in vars_correl:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col].astype(str).str.replace(r"[^0-9\.\-]", "", regex=True), errors='coerce')
     result_cols = [c for c in df.columns if c.startswith('RESULT_')]
     for c in result_cols:
-        df[c + '_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
+        df[c + '_status'] = df[c].astype(str).map(lambda x: status_map.get(x.strip(), 'Normal'))
 
-    # Métricas generales (solo tarjetas)
+    # Métricas principales
     total = len(df)
     lubs = df['Tested Lubricant'].nunique()
     ops = df['Account Name'].nunique()
-    fecha_min = df['Date Reported'].min().date()
-    fecha_max = df['Date Reported'].max().date()
     equipos = df['Unit ID'].nunique()
+    fechas = df['Date Reported'].agg(['min', 'max'])
+    fechas = fechas.min.date(), fechas.max.date()
     df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
-    mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
-    overall_mean = mean_int.mean()
+    mean_int = df_sorted.groupby('Unit ID')['Date Reported'].diff().dt.days.mean()
 
+    # Tarjetas de resumen
     st.subheader("🔎 Resumen general")
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Total muestras", total)
-    m2.metric("Lubricantes distintos", lubs)
-    m3.metric("Operaciones distintas", ops)
-    m4.metric("Equipos distintos", equipos)
-    m5.metric("Intervalo medio (días)", f"{overall_mean:.1f}")
+    cols = st.columns(4)
+    cols[0].metric("Muestras totales", total)
+    cols[1].metric("Lubricantes distintos", lubs)
+    cols[2].metric("Operaciones", ops)
+    cols[3].metric("Equipos", equipos)
 
     # ---------------------------------------------
     # Gráficos fila 1: Muestras por cuenta y estados
     # ---------------------------------------------
     r1c1, r1c2 = st.columns(2)
+    # Preparar datos de cuentas con letras
+    cuenta_counts = df['Account Name'].value_counts()
+    df_cuenta = cuenta_counts.reset_index()
+    df_cuenta.columns = ['Cuenta', 'Muestras']
+    df_cuenta['Letra'] = list(string.ascii_lowercase[:len(df_cuenta)])
+
+    # Colores
+    palette = sns.color_palette('tab10', len(df_cuenta))
+    colores = [palette[i] for i in range(len(df_cuenta))]
+
     with r1c1:
         st.subheader("📊 Muestras por cuenta")
-        cuenta_counts = df['Account Name'].value_counts()
-        # Barra y tabla resumen
-        fig1, ax1 = plt.subplots(figsize=(4, 3))
-        ax1.bar(cuenta_counts.index, cuenta_counts.values)
+        fig1, ax1 = plt.subplots(figsize=(4,3))
+        ax1.bar(df_cuenta['Letra'], df_cuenta['Muestras'], color=colores)
+        ax1.set_xlabel('Cuenta')
         ax1.set_ylabel('Número de muestras')
-        ax1.set_xticklabels(cuenta_counts.index, rotation=45, ha='right')
-        for i, v in enumerate(cuenta_counts.values):
-            ax1.text(i, v + cuenta_counts.values.max()*0.01, str(v), ha='center')
+        for i, v in enumerate(df_cuenta['Muestras']):
+            ax1.text(i, v + max(df_cuenta['Muestras'])*0.01, str(v), ha='center')
         st.pyplot(fig1)
-        # Tabla resumen
-        table_cuentas = pd.DataFrame({'Cuenta': cuenta_counts.index, 'Muestras': cuenta_counts.values})
-        st.table(table_cuentas)
+        # Tabla con letras
+        df_table = df_cuenta[['Letra', 'Cuenta', 'Muestras']]
+        st.table(df_table)
+
     with r1c2:
         st.subheader("📊 Estados de muestras")
         status_counts = df['Report Status'].value_counts().reindex(['Normal', 'Caution', 'Alert']).fillna(0)
-        colors = {'Normal':'#2ecc71', 'Caution':'#f1c40f', 'Alert':'#e74c3c'}
-        fig2, ax2 = plt.subplots(figsize=(4, 3))
-        ax2.bar(status_counts.index, status_counts.values, color=[colors[s] for s in status_counts.index])
+        colores_status = {'Normal':'#2ecc71', 'Caution':'#f1c40f', 'Alert':'#e74c3c'}
+        fig2, ax2 = plt.subplots(figsize=(4,3))
+        ax2.bar(status_counts.index, status_counts.values, color=[colores_status[s] for s in status_counts.index])
         ax2.set_ylabel('Cantidad de muestras')
         for i, v in enumerate(status_counts.values):
-            ax2.text(i, v + status_counts.values.max()*0.01, str(int(v)), ha='center')
+            ax2.text(i, v + max(status_counts.values)*0.01, str(int(v)), ha='center')
         st.pyplot(fig2)
 
-    # Aquí seguirían las demás filas de gráficos (intervalos, pareto, etc.)
-
+    # ... resto de filas ...
 else:
     st.info("Configura los filtros y haz clic en '🚀 Empezar análisis' para ver resultados.")
+
