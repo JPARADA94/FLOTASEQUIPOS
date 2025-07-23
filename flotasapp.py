@@ -9,6 +9,17 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import string
 
+# ---------------------------------------------
+# Título e instrucciones
+# ---------------------------------------------
+st.title("📊 Análisis de Flotas - Mobil Serv")
+st.markdown(
+    """
+    Esta aplicación permite analizar datos históricos de flotas.
+    Selecciona filtros y pulsa '🚀 Empezar análisis'.
+    """
+)
+
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 
 # ---------------------------------------------
@@ -45,28 +56,24 @@ df = df2[df2['Tested Lubricant'].isin(sel_lubs)].copy()
 # Análisis
 # ---------------------------------------------
 if st.button("🚀 Empezar análisis"):
-    # Fila 1: muestras por cuenta + tabla
+    # Fila 1: muestras por cuenta con leyenda interna
     st.subheader("📊 Muestras por cuenta")
     cnt = df['Account Name'].value_counts()
     df_cnt = cnt.reset_index()
     df_cnt.columns = ['Cuenta','Muestras']
     df_cnt['Letra'] = list(string.ascii_lowercase[:len(df_cnt)])
     colors = sns.color_palette('tab10', len(df_cnt))
-    r1c1, r1c2 = st.columns([3,2])
-    with r1c1:
-        fig, ax = plt.subplots(figsize=(6,3))
-        ax.bar(df_cnt['Letra'], df_cnt['Muestras'], color=colors)
-        for i, v in enumerate(df_cnt['Muestras']):
-            ax.text(i, v + df_cnt['Muestras'].max()*0.01, str(v), ha='center')
-        handles = [plt.Rectangle((0,0),1,1,color=colors[i]) for i in range(len(df_cnt))]
-        labels = [f"{l}: {c}" for l,c in zip(df_cnt['Letra'], df_cnt['Cuenta'])]
-        ax.legend(handles, labels, title='Cuentas', loc='upper right', fontsize='small', title_fontsize='small')
-        ax.set_xlabel('Cuenta')
-        ax.set_ylabel('Número de muestras')
-        fig.tight_layout()
-        st.pyplot(fig)
-    with r1c2:
-        st.table(df_cnt.set_index('Letra'))
+    fig, ax = plt.subplots(figsize=(8,3))
+    ax.bar(df_cnt['Letra'], df_cnt['Muestras'], color=colors)
+    for i, v in enumerate(df_cnt['Muestras']):
+        ax.text(i, v + df_cnt['Muestras'].max()*0.01, str(v), ha='center')
+    handles = [plt.Rectangle((0,0),1,1,color=colors[i]) for i in range(len(df_cnt))]
+    labels = [f"{l}: {c}" for l,c in zip(df_cnt['Letra'], df_cnt['Cuenta'])]
+    ax.legend(handles, labels, title='Cuentas', loc='upper right', fontsize='small', title_fontsize='small')
+    ax.set_xlabel('Cuenta')
+    ax.set_ylabel('Número de muestras')
+    fig.tight_layout()
+    st.pyplot(fig)
 
     # Fila 2: estado de muestras
     st.subheader("📊 Estados de muestras")
@@ -84,3 +91,4 @@ if st.button("🚀 Empezar análisis"):
 
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
