@@ -243,5 +243,19 @@ if st.session_state.analizado:
             .reset_index()
             .rename(columns={'Tested Lubricant':'Lubricante'})
         )
-        st.table(df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']])
+                # Estilizar tabla de Visc@40C
+        styles_visc = [
+            {"selector":"th","props":[("background-color","#2f4f4f"),("color","white"),("font-size","14px"),("text-align","center")]},
+            {"selector":"td","props":[("padding","8px"),("font-size","13px"),("text-align","center")]},
+            {"selector":"tr:nth-child(even)","props":[("background-color","#f0f0f0")]}
+        ]
+        styled_visc = (
+            df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']]
+            .style
+            .set_table_styles(styles_visc)
+            .hide_index()
+            .background_gradient(subset=['# Alertas/Precauciones'], cmap='Oranges')
+            .format({'Promedio':'{:.0f}'})
+        )
+        st.write(styled_visc)
 
