@@ -1,7 +1,7 @@
 # flotasapp.py
 # Autor: Javier Parada
 # Fecha de creación: 2025-07-20
-# Descripción: Análisis de flotas con filtros, gráficos y estadísticas avanzadas (enteros)
+# Descripción: Análisis de flotas con filtros, gráficos y estadísticas avanzadas (enteros) y tabla full-width para Visc@40C
 
 import streamlit as st
 import pandas as pd
@@ -148,7 +148,7 @@ if st.session_state.analizado:
     with c5:
         st.subheader("📋 Pareto de Alertas (Top 10)")
         cols_res = [c for c in df.columns if c.startswith('RESULT_') and not c.endswith('_status')]
-        cnts = {c.replace('RESULT_',''): df[c + '_status'].eq('Alert').sum() for c in cols_res}
+        cnts = {c.replace('RESULT_',''): df[c+'_status'].eq('Alert').sum() for c in cols_res}
         ser = pd.Series(cnts).loc[lambda x: x>0].sort_values(ascending=False)
         top10 = ser.head(10) if len(ser)>10 else ser
         fig3, ax3 = plt.subplots(figsize=(8,4))
@@ -213,9 +213,9 @@ if st.session_state.analizado:
     with s2:
         st.markdown("**Alert/Caution**")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
-        s_sub = pd.to_numeric(df_sub[sel_var], errors='coerce')
+        s_sub_source = pd.to_numeric(df_sub[sel_var], errors='coerce')
         stats_sub = (
-            s_sub
+            s_sub_source
             .describe()
             .round(0)
             .fillna(0)
@@ -226,23 +226,22 @@ if st.session_state.analizado:
         stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_sub[['Descripción','Valor']])
 
-        # Tabla adicional para Visc@40C (cSt)
-        if sel_var == 'Visc@40C (cSt)':
-            st.subheader("🛢️ Alertas/Precauciones por lubricante (Visc@40C)")
-            df_visc40 = df[df[status_col].isin(['Alert','Caution'])].copy()
-            # Convertir a numérico antes de agrupar
-            df_visc40[sel_var] = pd.to_numeric(df_visc40[sel_var], errors='coerce')
-            df_visc40 = (
-                df_visc40
-                .groupby('Tested Lubricant')[sel_var]
-                .agg(**{
-                    '# Alertas/Precauciones':'count',
-                    'Promedio':'mean'
-                })
-                .round(0)
-                .astype(int)
-                .reset_index()
-                .rename(columns={'Tested Lubricant':'Lubricante'})
-            )
-            st.table(df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']])
+    # Tabla adicional de Visc@40C a ancho completo
+    if sel_var == 'Visc@40C (cSt)':
+        st.subheader("🛢️ Alertas/Precauciones por lubricante (Visc@40C)")
+        df_visc40 = df[df[status_col].isin(['Alert','Caution'])].copy()
+        df_visc40[sel_var] = pd.to_numeric(df_visc40[sel_var], errors='coerce')
+        df_visc40 = (
+            df_visc40
+            .groupby('Tested Lubricant')[sel_var]
+            .agg(**{
+                '# Alertas/Precauciones':'count',
+                'Promedio':'mean'
+            })
+            .round(0)
+            .astype(int)
+            .reset_index()
+            .rename(columns={'Tested Lubricant':'Lubricante'})
+        )
+        st.table(df_visc40[['Lubricante','# Alertas/Precauciones','Promedio']])
 
