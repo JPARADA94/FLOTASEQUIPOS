@@ -76,7 +76,7 @@ if st.button("🚀 Empezar análisis"):
             ax.text(i, v + df_cnt['Muestras'].max()*0.01, str(v), ha='center')
         # Eliminar leyenda interna, tabla a la derecha cubre el mapeo
         fig.tight_layout()
-        st.pyplot(fig)
+        st.pyplot(fig, use_container_width=True)
     with r1c2:
         st.subheader("📋 Cuentas asignadas")
         # Usar df_cnt para incluir Muestras y calcular porcentaje
@@ -143,8 +143,7 @@ if st.button("🚀 Empezar análisis"):
         ax2.set_xlabel('Estado')
         ax2.set_ylabel('Cantidad de muestras')
         fig2.tight_layout()
-        st.pyplot(fig2)
+        st.pyplot(fig2, use_container_width=True)
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
-  
 
