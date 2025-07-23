@@ -14,7 +14,7 @@ st.title("📊 Análisis de Flotas - Mobil Serv")
 st.markdown("""
 Esta aplicación analiza datos de flotas con base en informes de Mobil Serv.
 Filtra por cuenta, clase de activo, lubricante y fecha, y luego pulsa "🚀 Empezar análisis".
-""")
+""" AUTOR: Javier Parada)
 
 # ========== Carga de archivo ==========
 archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
