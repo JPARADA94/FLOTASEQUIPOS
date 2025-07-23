@@ -1,7 +1,7 @@
 # flotasapp.py
 # Autor: Javier Parada
 # Fecha de creación: 2025-07-20
-# Descripción: Aplicación Streamlit para análisis de datos de flotas basado en formato Mobil Serv
+# Descripción: Aplicación Streamlit para análisis de datos de flotas basada en formato Mobil Serv
 
 import streamlit as st
 import pandas as pd
@@ -68,7 +68,7 @@ st.markdown(
 )
 st.markdown(
     """
-    Esta aplicación permite analizar datos históricos de flotas.
+    Esta aplicación permite analizar datos históricos de flotas.  
     ✅ **Importante:** el archivo Excel debe estar filtrado (un único tipo de equipo) y seguir el formato **Mobil Serv**.
     """
 )
@@ -82,11 +82,11 @@ if not archivo:
     st.stop()
 
 df_raw = pd.read_excel(archivo)
-# Validar columnas
-afalt = sorted(set(columnas_esperadas) - set(df_raw.columns))
-if falt:
+
+# Validar columnas faltantes\ nmissing_cols = sorted(set(columnas_esperadas) - set(df_raw.columns))
+if missing_cols:
     st.error("❌ Faltan columnas en el archivo:")
-    st.code("\n".join(falt))
+    st.code("\n".join(missing_cols))
     st.stop()
 
 # ---------------------------------------------
@@ -99,6 +99,7 @@ seleccion_cuentas = st.multiselect(
 if not seleccion_cuentas:
     st.warning("Debes seleccionar al menos una cuenta.")
     st.stop()
+
 df_cuentas = df_raw[df_raw['Account Name'].isin(seleccion_cuentas)].copy()
 
 # ---------------------------------------------
@@ -111,6 +112,7 @@ seleccion_clases = st.multiselect(
 if not seleccion_clases:
     st.warning("Debes seleccionar al menos una clase de equipo.")
     st.stop()
+
 df_clases = df_cuentas[df_cuentas['Asset Class'].isin(seleccion_clases)].copy()
 
 # ---------------------------------------------
@@ -123,6 +125,7 @@ seleccion_lub = st.multiselect(
 if not seleccion_lub:
     st.warning("Debes seleccionar al menos un lubricante.")
     st.stop()
+
 df = df_clases[df_clases['Tested Lubricant'].isin(seleccion_lub)].copy()
 
 # ---------------------------------------------
@@ -141,7 +144,7 @@ if st.button("🚀 Empezar análisis"):
     for c in result_cols:
         df[c + '_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
 
-    # Métricas generales
+    # Cálculo de métricas generales
     total = len(df)
     lubs = df['Tested Lubricant'].nunique()
     ops = df['Account Name'].nunique()
@@ -169,7 +172,9 @@ if st.button("🚀 Empezar análisis"):
     c3.metric("Lubricantes distintos", lubs)
     c4.metric("Intervalo medio (días)", f"{overall_mean:.1f}")
 
+    # ---------------------------------------------
     # Gráficos fijos (3 filas x 2 columnas)
+    # ---------------------------------------------
     r1c1, r1c2 = st.columns(2)
     with r1c1:
         st.subheader("📈 Estados de muestras")
@@ -179,7 +184,7 @@ if st.button("🚀 Empezar análisis"):
         fig1, ax1 = plt.subplots(figsize=(4,3))
         ax1.bar(orden, vals)
         ax1.set_ylabel('Cantidad de muestras')
-        for i, v in enumerate(vals): ax1.text(i, v+2, str(v), ha='center')
+        for i, v in enumerate(vals): ax1.text(i, v + 2, str(v), ha='center')
         st.pyplot(fig1)
     with r1c2:
         st.subheader("📊 Frecuencia de muestreo (Top 15 equipos)")
@@ -187,7 +192,7 @@ if st.button("🚀 Empezar análisis"):
         fig2, ax2 = plt.subplots(figsize=(4,3))
         ax2.barh(top15.index, top15.values)
         ax2.set_xlabel('Número de muestras')
-        for i, v in enumerate(top15.values): ax2.text(v+1, i, str(v), va='center')
+        for i, v in enumerate(top15.values): ax2.text(v + 1, i, str(v), va='center')
         st.pyplot(fig2)
 
     r2c1, r2c2 = st.columns(2)
@@ -197,45 +202,45 @@ if st.button("🚀 Empezar análisis"):
         fig3, ax3 = plt.subplots(figsize=(4,3))
         ax3.barh(mean_top.index, mean_top.values)
         ax3.set_xlabel('Días promedio')
-        for i, v in enumerate(mean_top.values): ax3.text(v+0.5, i, f"{v:.1f}", va='center')
+        for i, v in enumerate(mean_top.values): ax3.text(v + 0.5, i, f"{v:.1f}", va='center')
         st.markdown(f"**Nota:** Promedio Top 15 = {mean_top.mean():.1f} días")
         st.pyplot(fig3)
     with r2c2:
         st.subheader("📋 Pareto: Alert por parámetro (Top 10)")
-        alert_ser = pd.Series({c.replace('RESULT_',''): (df[c+'_status']=='Alert').sum() for c in result_cols}).sort_values(ascending=False).head(10)
+        alert_ser = pd.Series({c.replace('RESULT_',''): (df[c + '_status']=='Alert').sum() for c in result_cols}).sort_values(ascending=False).head(10)
         fig4, ax4 = plt.subplots(figsize=(4,3))
         ax4.barh(alert_ser.index, alert_ser.values)
         ax4.invert_yaxis()
         ax4.set_xlabel('Número de Alertas')
-        for i, v in enumerate(alert_ser.values): ax4.text(v+1, i, str(v), va='center')
+        for i, v in enumerate(alert_ser.values): ax4.text(v + 1, i, str(v), va='center')
         st.pyplot(fig4)
 
     r3c1, r3c2 = st.columns(2)
     with r3c1:
         st.subheader("📋 Pareto: Caution por parámetro (Top 10)")
-        caut_ser = pd.Series({c.replace('RESULT_',''): (df[c+'_status']=='Caution').sum() for c in result_cols}).sort_values(ascending=False).head(10)
+        caut_ser = pd.Series({c.replace('RESULT_',''): (df[c + '_status']=='Caution').sum() for c in result_cols}).sort_values(ascending=False).head(10)
         fig5, ax5 = plt.subplots(figsize=(4,3))
         ax5.barh(caut_ser.index, caut_ser.values)
         ax5.invert_yaxis()
         ax5.set_xlabel('Número de Cautions')
-        for i, v in enumerate(caut_ser.values): ax5.text(v+1, i, str(v), va='center')
+        for i, v in enumerate(caut_ser.values): ax5.text(v + 1, i, str(v), va='center')
         st.pyplot(fig5)
     with r3c2:
         st.subheader("🔗 Pareto: combos Alert (Top 10)")
         combos = {}
         for _, row in df.iterrows():
-            alerts = [c.replace('RESULT_','') for c in result_cols if row[c+'_status']=='Alert']
-            if len(alerts)>1:
-                for a,b in combinations(alerts,2):
-                    combos[f"{a} & {b}"] = combos.get(f"{a} & {b}",0)+1
+            alerts = [c.replace('RESULT_','') for c in result_cols if row[c + '_status']=='Alert']
+            if len(alerts) > 1:
+                for a, b in combinations(alerts, 2):
+                    combos[f"{a} & {b}"] = combos.get(f"{a} & {b}", 0) + 1
         comb_ser = pd.Series(combos).sort_values(ascending=False).head(10)
         fig6, ax6 = plt.subplots(figsize=(4,3))
         ax6.barh(comb_ser.index, comb_ser.values)
         ax6.invert_yaxis()
         ax6.set_xlabel('Número de muestras')
-        for i, v in enumerate(comb_ser.values): ax6.text(v+1, i, str(v), va='center')
+        for i, v in enumerate(comb_ser.values): ax6.text(v + 1, i, str(v), va='center')
         st.pyplot(fig6)
-
 else:
     st.info("Configura los filtros y haz clic en '🚀 Empezar análisis' para ver resultados.")
+
 
