@@ -97,6 +97,20 @@ if st.session_state.analizado:
     # 7.0 Resumen general
     # ---------------------------------------------
     total = len(df)
+    equipos = df['Unit ID'].nunique()
+    fecha_min = df['Date Reported'].min().date()
+    fecha_max = df['Date Reported'].max().date()
+    df_sorted = df.sort_values(['Unit ID', 'Date Reported'])
+    mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
+    overall_mean = mean_int.mean()
+    st.markdown("### 🔎 Resumen general")
+    st.markdown(f"- Total muestras: **{total}**  \
+- Equipos analizados: **{equipos}**  \
+- Rango de fechas: **{fecha_min}** a **{fecha_max}**  \
+- Intervalo medio entre muestras (días): **{overall_mean:.1f}**")
+
+    # ---------------------------------------------
+    total = len(df)
     fecha_min = df['Date Reported'].min().date()
     fecha_max = df['Date Reported'].max().date()
     df_sorted = df.sort_values(['Unit ID','Date Reported'])
