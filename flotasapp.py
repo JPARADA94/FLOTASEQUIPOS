@@ -96,20 +96,26 @@ if st.button("🚀 Empezar análisis"):
 
                 # Fila 2: Pareto de fallas (Top 15)
     r2c1, r2c2 = st.columns([3, 2])
-    with r2c1:
+        with r2c1:
         st.subheader("📋 Pareto de fallas (Top 15)")
-        status_cols = [col for col in df.columns if col.endswith('_status')]
+        # Asegurar mapeo de estados para cada parámetro RESULT_
+        result_cols = [c for c in df.columns if c.startswith('RESULT_')]
         counts = {}
-        for sc in status_cols:
-            param = sc.replace('RESULT_','').replace('_status','')
-            counts[param] = ((df[sc] == 'Alert') | (df[sc] == 'Caution')).sum()
+        for c in result_cols:
+            status_col = c + '_status'
+            if status_col not in df.columns:
+                df[status_col] = df[c].astype(str).str.strip().map(status_map)
+            param = c.replace('RESULT_','')
+            counts[param] = ((df[status_col] == 'Alert') | (df[status_col] == 'Caution')).sum()
         top15 = pd.Series(counts).sort_values(ascending=False).head(15)
+        # Gráfica Pareto
         fig_p, ax_p = plt.subplots(figsize=(8, 4))
         ax_p.barh(top15.index, top15.values, color='skyblue')
         ax_p.invert_yaxis()
         ax_p.set_xlabel('Número de fallas')
         for i, v in enumerate(top15.values):
             ax_p.text(v + top15.max()*0.01, i, str(v), va='center')
+        # Curva acumulada
         cum = top15.cumsum() / top15.sum() * 100
         axp_line = ax_p.twiny()
         axp_line.plot(cum.values, range(len(cum)), '-o', color='black')
@@ -135,4 +141,5 @@ else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
