@@ -15,11 +15,13 @@ from itertools import combinations
 # ========================
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 st.title("📊 Análisis de Flotas - Mobil Serv")
-st.markdown("""
-Esta aplicación analiza datos de flotas en formato Mobil Serv.
-Filtra cuentas, clases de equipo y lubricantes, y genera gráficos y estadísticas.
-Todos los valores numéricos se muestran como enteros.
-""")
+st.markdown(
+    """
+    Esta aplicación analiza datos de flotas en formato Mobil Serv.
+    Filtra cuentas, clases de equipo y lubricantes, y genera gráficos y estadísticas.
+    Todos los valores numéricos se muestran como enteros.
+    """
+)
 
 # ========================
 # 2. Estado de análisis
@@ -28,30 +30,24 @@ if 'analizado' not in st.session_state:
     st.session_state.analizado = False
 
 # ======================================
-# 3. Carga y validación del Excel
+# 3. Carga y validación del archivo Excel
 # ======================================
 archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx)", type=["xlsx"])
 if not archivo:
     st.stop()
 raw = pd.read_excel(archivo)
-
-required_cols = [
-    'Account Name', 'Asset Class', 'Tested Lubricant',
-    'Report Status', 'Date Reported', 'Unit ID'
-]
+required_cols = ['Account Name', 'Asset Class', 'Tested Lubricant', 'Report Status', 'Date Reported']
 for col in required_cols:
     if col not in raw.columns:
         st.error(f"Falta columna: {col}")
         st.stop()
-
 raw['Date Reported'] = pd.to_datetime(raw['Date Reported'], errors='coerce')
 
 # =========================
 # 4. Filtros interactivos
 # =========================
 sel_cuentas = st.multiselect(
-    "Selecciona cuenta(s)",
-    raw['Account Name'].unique(),
+    "Selecciona cuenta(s)", raw['Account Name'].unique(),
     default=raw['Account Name'].unique()
 )
 if not sel_cuentas:
@@ -59,8 +55,7 @@ if not sel_cuentas:
 df1 = raw[raw['Account Name'].isin(sel_cuentas)]
 
 sel_clases = st.multiselect(
-    "Selecciona Asset Class",
-    df1['Asset Class'].unique(),
+    "Selecciona Asset Class", df1['Asset Class'].unique(),
     default=df1['Asset Class'].unique()
 )
 if not sel_clases:
@@ -68,8 +63,7 @@ if not sel_clases:
 df2 = df1[df1['Asset Class'].isin(sel_clases)]
 
 sel_lubs = st.multiselect(
-    "Selecciona lubricante(s)",
-    df2['Tested Lubricant'].unique(),
+    "Selecciona lubricante(s)", df2['Tested Lubricant'].unique(),
     default=df2['Tested Lubricant'].unique()
 )
 if not sel_lubs:
@@ -81,7 +75,11 @@ df = df2[df2['Tested Lubricant'].isin(sel_lubs)].copy()
 # =================================
 status_map = {'*':'Alert', '+':'Caution', '':'Normal'}
 for c in [col for col in df.columns if col.startswith('RESULT_')]:
-    df[c + '_status'] = df[c].astype(str).str.strip().map(lambda x: status_map.get(x, 'Normal'))
+    df[c + '_status'] = (
+        df[c].astype(str)
+             .str.strip()
+             .map(lambda x: status_map.get(x, 'Normal'))
+    )
 
 # ====================================
 # 6. Botón para iniciar el análisis
@@ -95,9 +93,38 @@ if not st.session_state.analizado:
 # 7. Bloque de análisis
 # =====================
 if st.session_state.analizado:
-
     # ---------------------------------------------
     # 7.0 Resumen general
+    # ---------------------------------------------
+    # Filtrar duplicados de muestras
+    df_nodup = df.drop_duplicates(subset=['Sample Bottle ID']) if 'Sample Bottle ID' in df.columns else df.copy()
+    # Calcular métricas
+    total = len(df_nodup)
+    equipos = df_nodup['Asset ID'].nunique() if 'Asset ID' in df_nodup.columns else df_nodup['Unit ID'].nunique()
+    fecha_min = df_nodup['Date Reported'].min().date()
+    fecha_max = df_nodup['Date Reported'].max().date()
+    # Intervalo medio solo para equipos con >=2 muestras
+    if 'Asset ID' in df_nodup.columns:
+        grp_col = 'Asset ID'
+    else:
+        grp_col = 'Unit ID'
+    df_sorted = df_nodup.sort_values([grp_col, 'Date Reported'])
+    diffs = (
+        df_sorted.groupby(grp_col)['Date Reported']
+                 .apply(lambda x: x.diff().dt.days.dropna())
+    )
+    overall_mean = diffs.mean()
+    st.markdown("### 🔎 Resumen general")
+    st.markdown(
+        f"- Total muestras (únicas): **{total}**  
+"
+        f"- Equipos analizados: **{equipos}**  
+"
+        f"- Rango de fechas: **{fecha_min}** a **{fecha_max}**  
+"
+        f"- Intervalo medio entre muestras (días): **{overall_mean:.1f}**"
+    )
+
     # ---------------------------------------------
     total = len(df)
     equipos = df['Unit ID'].nunique()
@@ -107,35 +134,48 @@ if st.session_state.analizado:
     mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
     overall_mean = mean_int.mean()
     st.markdown("### 🔎 Resumen general")
-    st.markdown(
-        f"- Total muestras: **{total}**  \n"
-        f"- Equipos analizados: **{equipos}**  \n"
-        f"- Rango de fechas: **{fecha_min}** a **{fecha_max}**  \n"
-        f"- Intervalo medio entre muestras (días): **{overall_mean:.1f}**"
-    )
+    st.markdown(f"- Total muestras: **{total}**  \
+- Equipos analizados: **{equipos}**  \
+- Rango de fechas: **{fecha_min}** a **{fecha_max}**  \
+- Intervalo medio entre muestras (días): **{overall_mean:.1f}**")
 
     # ---------------------------------------------
-    # 7.1 Fila 1: Muestras por cuenta
+    total = len(df)
+    fecha_min = df['Date Reported'].min().date()
+    fecha_max = df['Date Reported'].max().date()
+    df_sorted = df.sort_values(['Unit ID','Date Reported'])
+    mean_int = df_sorted.groupby('Unit ID')['Date Reported'].apply(lambda x: x.diff().dt.days.mean())
+    overall_mean = mean_int.mean()
+    st.markdown("### 🔎 Resumen general")
+    st.markdown(f"- Total muestras: **{total}**  \
+- Rango de fechas: **{fecha_min}** a **{fecha_max}**  \
+- Intervalo medio entre muestras (días): **{overall_mean:.1f}**")
+
     # ---------------------------------------------
+
+    # --------------------------------
+    # 7.1 Fila 1: Muestras por cuenta
+    # --------------------------------
     st.subheader("📊 Muestras por cuenta")
     cnt = df['Account Name'].value_counts()
     df_cnt = cnt.reset_index()
-    df_cnt.columns = ['Cuenta','Muestras']
+    df_cnt.columns = ['Cuenta', 'Muestras']
     df_cnt['Letra'] = list(string.ascii_lowercase[:len(df_cnt)])
     pal = sns.color_palette('tab10', len(df_cnt))
-
-    c1, c2 = st.columns(2)
-    with c1:
+    col1, col2 = st.columns(2)
+    with col1:
         fig1, ax1 = plt.subplots(figsize=(8,4))
         ax1.bar(df_cnt['Letra'], df_cnt['Muestras'], color=pal)
         for i, v in enumerate(df_cnt['Muestras']):
-            ax1.text(i, v+0.5, str(int(v)), ha='center')
+            ax1.text(i, v + 0.5, str(int(v)), ha='center')
         ax1.set_xlabel('Cuenta'); ax1.set_ylabel('Nº muestras')
         fig1.tight_layout(); st.pyplot(fig1, use_container_width=True)
-    with c2:
+
+        # Tabla de mapeo
+    with col2:
         st.subheader("📋 Cuentas asignadas")
         tabla = df_cnt[['Letra','Cuenta','Muestras']].copy()
-        tabla['% Muestras'] = ((tabla['Muestras']/tabla['Muestras'].sum())*100).round(0).astype(int)
+        tabla['% Muestras'] = ((tabla['Muestras'] / tabla['Muestras'].sum()) * 100).round(0).astype(int)
         styles = [
             {"selector":"th","props":[("background-color","#4f81bd"),("color","white"),("text-align","left")]},
             {"selector":"td","props":[("padding","8px"),("border","1px solid #ddd"),("text-align","left")]},
@@ -148,83 +188,74 @@ if st.session_state.analizado:
                  .format({'% Muestras':'{:.0f}%'})
         )
 
-    # ---------------------------------------------
-    # 7.2 Fila 2: Estados y Muestras por año
-    # ---------------------------------------------
-    c3, c4 = st.columns(2)
-    with c3:
+    # --------------------------------
+    # 7.2 Fila 2: Estado y Muestras por año
+    # --------------------------------
+    col3, col4 = st.columns(2)
+    with col3:
         st.subheader("📊 Estados de muestras")
         cnt2 = df['Report Status'].value_counts().reindex(['Normal','Caution','Alert'], fill_value=0)
         cmap2 = {'Normal':'#2ecc71','Caution':'#f1c40f','Alert':'#e74c3c'}
         fig2, ax2 = plt.subplots(figsize=(8,4))
         ax2.bar(cnt2.index, cnt2.values, color=[cmap2[s] for s in cnt2.index])
-        for i, v in enumerate(cnt2.values):
-            ax2.text(i, v+0.5, str(int(v)), ha='center')
+        for i, v in enumerate(cnt2.values): ax2.text(i, v + 0.5, str(int(v)), ha='center')
         ax2.set_xlabel('Estado'); ax2.set_ylabel('Nº muestras')
         fig2.tight_layout(); st.pyplot(fig2, use_container_width=True)
-    with c4:
+    with col4:
         st.subheader("📈 Muestras por año")
         yearly = df['Date Reported'].dt.year.value_counts().sort_index()
         figyr, axy = plt.subplots(figsize=(8,4))
         axy.bar(yearly.index.astype(str), yearly.values, color='steelblue')
-        for i, v in enumerate(yearly.values):
-            axy.text(i, v+0.5, str(int(v)), ha='center')
+        for i, v in enumerate(yearly.values): axy.text(i, v + 0.5, str(int(v)), ha='center')
         axy.set_xlabel('Año'); axy.set_ylabel('Nº muestras')
         figyr.tight_layout(); st.pyplot(figyr, use_container_width=True)
 
-    # ---------------------------------------------
-    # 7.3 Fila 3: Pareto de alertas y combinaciones
-    # ---------------------------------------------
-    c5, c6 = st.columns(2)
-    with c5:
+    # --------------------------------
+    # 7.3 Fila 3: Pareto de alertas
+    # --------------------------------
+    col5, col6 = st.columns(2)
+    with col5:
         st.subheader("📋 Pareto de Alertas (Top 10)")
         res_cols = [c for c in df.columns if c.startswith('RESULT_') and not c.endswith('_status')]
         cnts = {c.replace('RESULT_',''): df[c + '_status'].eq('Alert').sum() for c in res_cols}
         ser = pd.Series(cnts).loc[lambda x: x>0].sort_values(ascending=False)
-        top10 = ser.head(10) if len(ser)>10 else ser
+        top10 = ser.head(10) if len(ser) > 10 else ser
         fig3, ax3 = plt.subplots(figsize=(8,4))
         ax3.barh(top10.index, top10.values, color='crimson')
         ax3.invert_yaxis(); ax3.set_xlabel('Nº Alertas')
-        for i, v in enumerate(top10.values):
-            ax3.text(v+0.5, i, str(int(v)), va='center')
-        cum = top10.cumsum()/top10.sum()*100
+        for i, v in enumerate(top10.values): ax3.text(v + 0.5, i, str(int(v)), va='center')
+        cum = top10.cumsum() / top10.sum() * 100
         ln = ax3.twiny(); ln.plot(cum.values, range(len(cum)), '-o', color='black'); ln.set_xlabel('% acumulado')
-        for i, p in enumerate(cum):
-            ln.text(p+1, i, f"{int(p)}%", va='center')
+        for i, p in enumerate(cum): ln.text(p + 1, i, f"{int(p)}%", va='center')
         fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
-    with c6:
+    with col6:
         st.subheader("🔗 Pareto de combinaciones de fallas")
         status_cols = [c for c in df.columns if c.endswith('_status')]
         combos = {}
         for _, row in df.iterrows():
-            alerts = [
-                c.replace('RESULT_','').replace('_status','')
-                for c in status_cols if row[c] in ['Alert','Caution']
-            ]
-            for size in range(2, len(alerts)+1):
+            alerts = [c.replace('RESULT_','').replace('_status','') for c in status_cols if row[c] in ['Alert','Caution']]
+            for size in range(2, len(alerts) + 1):
                 for combo in combinations(alerts, size):
                     key = ' & '.join(combo)
                     combos[key] = combos.get(key, 0) + 1
         comb_ser = pd.Series(combos).loc[lambda x: x>0].sort_values(ascending=False)
-        topc = comb_ser.head(10) if len(comb_ser)>10 else comb_ser
+        topc = comb_ser.head(10) if len(comb_ser) > 10 else comb_ser
         if topc.empty:
             st.warning("No hay combinaciones de Alertas/Precauciones.")
         else:
             fig4, ax4 = plt.subplots(figsize=(8,4))
             ax4.barh(topc.index, topc.values, color='#8e44ad')
             ax4.invert_yaxis(); ax4.set_xlabel('Nº muestras')
-            for i, v in enumerate(topc.values):
-                ax4.text(v+0.5, i, str(int(v)), va='center')
-            cum2 = topc.cumsum()/topc.sum()*100
+            for i, v in enumerate(topc.values): ax4.text(v + 0.5, i, str(int(v)), va='center')
+            cum2 = topc.cumsum() / topc.sum() * 100
             ln2 = ax4.twiny(); ln2.plot(cum2.values, range(len(cum2)), '-o', color='black'); ln2.set_xlabel('% acumulado')
-            for i, p in enumerate(cum2):
-                ln2.text(p+1, i, f"{int(p)}%", va='center')
+            for i, p in enumerate(cum2): ln2.text(p + 1, i, f"{int(p)}%", va='center')
             fig4.tight_layout(); st.pyplot(fig4, use_container_width=True)
 
-    # ================================
+    # =================================
     # 8. Estadísticas por variable
-    # ================================
-    st.header("🔍 Análisis por variable")
+    # =================================
+    st.subheader("🔍 Análisis por variable")
     pareto_vars = top10.index.tolist()
     sel_var = st.selectbox("Selecciona variable de Pareto:", pareto_vars)
     status_col = f"RESULT_{sel_var}_status"
@@ -234,42 +265,27 @@ if st.session_state.analizado:
         'min':'Valor mínimo','25%':'Primer cuartil','50%':'Mediana','75%':'Tercer cuartil','max':'Valor máximo'
     }
 
-    colg, cola = st.columns(2)
-    with colg:
+    stats_col1, stats_col2 = st.columns(2)
+    with stats_col1:
         st.markdown("**Global**")
         series_glob = pd.to_numeric(df[sel_var], errors='coerce')
-        stats_glob = (
-            series_glob
-            .describe()
-            .round(0)
-            .fillna(0)
-            .astype(int)
-            .to_frame()
-            .rename(columns={sel_var:'Valor'})
-        )
+        stats_glob = (series_glob.describe().round(0).fillna(0).astype(int)
+                      .to_frame().rename(columns={sel_var:'Valor'}))
         stats_glob['Descripción'] = stats_glob.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_glob[['Descripción','Valor']])
-    with cola:
+    with stats_col2:
         st.markdown("**Alert/Caution**")
         df_sub = df[df[status_col].isin(['Alert','Caution'])]
         series_sub = pd.to_numeric(df_sub[sel_var], errors='coerce')
-        stats_sub = (
-            series_sub
-            .describe()
-            .round(0)
-            .fillna(0)
-            .astype(int)
-            .to_frame()
-            .rename(columns={sel_var:'Valor'})
-        )
+        stats_sub = (series_sub.describe().round(0).fillna(0).astype(int)
+                      .to_frame().rename(columns={sel_var:'Valor'}))
         stats_sub['Descripción'] = stats_sub.index.map(lambda i: desc_map.get(i, i))
         st.table(stats_sub[['Descripción','Valor']])
 
-    # ==================================================
+    # ===============================================
     # 9. Tabla full-width para Visc@40C (cSt)
-    # ==================================================
+    # ===============================================
     if sel_var == 'Visc@40C (cSt)':
-        st.markdown("---")
         st.subheader("🛢️ Alertas/Precauciones por lubricante (Visc@40C)")
         df_visc40 = df[df[status_col].isin(['Alert','Caution'])].copy()
         df_visc40[sel_var] = pd.to_numeric(df_visc40[sel_var], errors='coerce')
@@ -299,9 +315,9 @@ if st.session_state.analizado:
         )
         st.write(styled_visc)
 
-    # ============================================================
-    # 10. Correlación de variables seleccionadas (Heatmap ajustado)
-    # ============================================================
+    # ==================================================
+    # 10. Correlación de variables seleccionadas (Heatmap)
+    # ==================================================
     numeric_cols = df.select_dtypes(include='number').columns.tolist()
     original_vars = [
         'K (Potassium)', 'Na (Sodium)', 'Si (Silicon)', 'Water (Vol%)',
@@ -334,26 +350,22 @@ if st.session_state.analizado:
         if len(sel) == n:
             for col in sel:
                 df[col] = pd.to_numeric(
-                    df[col].astype(str).str.replace(r"[^0-9\\.-]", "", regex=True),
+                    df[col].astype(str).str.replace(r"[^0-9\.\-]", "", regex=True),
                     errors='coerce'
                 )
             corr = df[sel].corr()
             size = max(4, n * 0.6)
             annot_font = max(6, 14 - n)
-            fight, axht = plt.subplots(figsize=(size, size))
+            fig, ax = plt.subplots(figsize=(size, size))
             sns.heatmap(
                 corr, annot=True, fmt='.2f', cmap='coolwarm',
                 annot_kws={'fontsize': annot_font}, linewidths=0.5,
-                square=True, ax=axht
+                square=True, ax=ax
             )
-            axht.set_xticklabels(
-                axht.get_xticklabels(), rotation=45,
-                ha='right', fontsize=annot_font
-            )
-            axht.set_yticklabels(
-                axht.get_yticklabels(), rotation=0, fontsize=annot_font
-            )
-            axht.set_title('Heatmap de correlación', fontsize=annot_font+2)
-            fight.tight_layout(); st.pyplot(fight, use_container_width=True)
+            ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=annot_font)
+            ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=annot_font)
+            ax.set_title('Heatmap de correlación', fontsize=annot_font+2)
+            fig.tight_layout(); st.pyplot(fig, use_container_width=True)
         else:
             st.warning(f"Selecciona exactamente {n} variables.")
+
