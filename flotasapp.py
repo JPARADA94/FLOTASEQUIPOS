@@ -82,7 +82,7 @@ if st.button("🚀 Empezar análisis"):
         st.subheader("📋 Cuentas asignadas")
         # Mostrar sólo el mapeo letra -> Cuenta, sin columnas de conteo
         tabla_map = df_cnt[['Letra', 'Cuenta']].set_index('Letra')
-        st.table(tabla_map))
+        st.table(tabla_map)
 
     # Fila 2: gráfico de estado de muestras
     r2c1, _ = st.columns([2, 3])
@@ -102,6 +102,7 @@ if st.button("🚀 Empezar análisis"):
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
 
 
 
