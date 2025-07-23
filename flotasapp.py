@@ -124,7 +124,26 @@ if st.button("🚀 Empezar análisis"):
         ax3_line = ax3.twiny(); ax3_line.plot(cum.values, range(len(cum)), '-o', color='black'); ax3_line.set_xlabel('% acumulado')
         for i,p in enumerate(cum): ax3_line.text(p+1, i, f"{p:.0f}%", va='center')
         fig3.tight_layout(); st.pyplot(fig3, use_container_width=True)
-        with c6:
+            with c6:
+        st.subheader("🔍 Análisis por variable")
+        vars_pareto = [c.replace('RESULT_','') for c in df.columns if c.startswith('RESULT_') and (c + '_status') in df.columns]
+        sel_var = st.selectbox("Selecciona variable de Pareto:", vars_pareto)
+        status_col = 'RESULT_' + sel_var + '_status'
+
+        # Estadísticas completas
+        st.markdown("**Estadísticas globales para la variable seleccionada**")
+        if sel_var in df.columns:
+            st.write(df[sel_var].describe())
+        else:
+            st.warning(f"No hay datos numéricos para {sel_var}.")
+
+        # Estadísticas para Alertas y Precauciones
+        st.markdown("**Estadísticas para casos de Alertas y Precauciones**")
+        df_sub = df[df[status_col].isin(['Alert','Caution'])]
+        if sel_var in df_sub.columns and not df_sub.empty:
+            st.write(df_sub[sel_var].describe())
+        else:
+            st.warning("No hay registros con Alertas o Precauciones para esta variable.")
         st.subheader("🔍 Análisis por variable")
         vars_pareto = [c.replace('RESULT_','') for c in df.columns if c.startswith('RESULT_') and (c + '_status') in df.columns]
         sel_var = st.selectbox("Selecciona variable de Pareto:", vars_pareto)
@@ -156,3 +175,4 @@ else:
 
 else:
     st.info("Configura los filtros y pulsa '🚀 Empezar análisis'.")
+
