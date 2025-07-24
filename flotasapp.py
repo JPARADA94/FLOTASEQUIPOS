@@ -295,3 +295,22 @@ else:
         fig.tight_layout(); st.pyplot(fig, use_container_width=True)
     else:
         st.warning(f"Selecciona exactamente {n} variables.")
+
+st.markdown("""
+---
+<div style="display: flex; justify-content: flex-end;">
+    <button onclick="window.print()" style="
+        background: #4f81bd; 
+        color: white; 
+        border: none; 
+        border-radius: 6px; 
+        padding: 10px 24px; 
+        font-size: 16px; 
+        cursor: pointer;
+        margin-top: 12px;
+    ">
+        🖨️ Imprimir o guardar en PDF
+    </button>
+</div>
+""", unsafe_allow_html=True)
+
