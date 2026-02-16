@@ -13,11 +13,10 @@ from itertools import combinations
 from collections import Counter
 
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
-st.title("📊 Análisis de Flotas - Mobil Serv")
+st.title("📊 Análisis de Flotas ")
 st.markdown("""
 Esta aplicación analiza datos de flotas con base en informes (formato ARCHIVO 2).
 Filtra por operación, clase de activo, lubricante y fecha, y luego pulsa "🚀 Empezar análisis".
-AUTOR: Javier Parada.
 """)
 
 # =========================
