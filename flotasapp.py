@@ -3,6 +3,7 @@
 # Formato de entrada: ARCHIVO 2 (nuevo)
 # Mejoras: cache de lectura, compatibilidad nativa con ARCHIVO 2, optimización combinaciones (Counter + itertuples),
 #          controles de robustez (fechas NaT, pareto vacío), evita SettingWithCopy.
+# Nuevo (2026): Módulo de gráficas de dispersión (X tiempo/uso vs múltiples Y: desgaste/salud/contaminación)
 
 import streamlit as st
 import pandas as pd
@@ -11,6 +12,7 @@ import seaborn as sns
 import string
 from itertools import combinations
 from collections import Counter
+import re
 
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 st.title("📊 Análisis de Flotas ")
@@ -297,7 +299,6 @@ with col5:
 
     if top10.empty:
         st.warning("No hay Alertas en variables RESULT_. (Con estos filtros)")
-
     else:
         etiquetas = [x.split('_')[-1] for x in top10.index]
         fig3, ax3 = plt.subplots(figsize=(7, 4))
@@ -510,4 +511,217 @@ else:
         st.pyplot(fig, use_container_width=True)
     else:
         st.warning(f"Selecciona exactamente {n} variables.")
+
+# ==========================================================
+# ========== NUEVO: Gráficas de dispersión (X vs Y) =========
+# ==========================================================
+st.markdown("---")
+st.markdown("### 📌 Gráficas de dispersión (X tiempo/uso vs Y)")
+
+def _looks_numeric_series(s: pd.Series) -> bool:
+    """Heurística para decidir si una columna 'parece' numérica."""
+    if s.dtype != 'O':
+        return True
+    sample = s.dropna().astype(str).head(40)
+    if sample.empty:
+        return False
+    return (sample.str.contains(r"\d", regex=True).mean() >= 0.6)
+
+def _to_numeric_clean(s: pd.Series) -> pd.Series:
+    """
+    Convierte objetos tipo '12,3', '1.234', '12 hrs', '1,234.5' a número lo mejor posible.
+    Nota: para datos con separadores miles/decimales mixtos puede haber casos raros,
+    pero para laboratorio suele funcionar bien.
+    """
+    s2 = s.astype(str)
+    s2 = s2.str.replace(r"\s", "", regex=True)
+    # decimal coma -> punto
+    s2 = s2.str.replace(",", ".", regex=False)
+    # dejar solo números, punto y signo
+    s2 = s2.str.replace(r"[^0-9\.\-]", "", regex=True)
+    return pd.to_numeric(s2, errors="coerce")
+
+def _is_dateish_colname(colname: str) -> bool:
+    cn = str(colname).upper()
+    return ("FECHA" in cn) or ("DATE" in cn)
+
+# ---------- 1) Candidatos para X (solo tiempo/uso) ----------
+x_candidates = []
+
+# Date Reported siempre es candidato (si existe)
+if 'Date Reported' in df_fil.columns:
+    x_candidates.append('Date Reported')
+
+# También permitir otras fechas del archivo (FECHA_...) como X
+for c in df_fil.columns:
+    if c in x_candidates:
+        continue
+    if _is_dateish_colname(c):
+        x_candidates.append(c)
+
+# Palabras clave para columnas de tiempo/uso numéricas (horas/km/odómetro/edad/servicio)
+time_kw = [
+    "HORA", "HORAS", "HRS", "HOUR", "HOURS", "HOROMETRO", "HORÓMETRO",
+    "KM", "KMS", "KILOM", "KILÓM", "KILOMET", "KILOMETR",
+    "ODOM", "ODÓM", "ODOMET", "ODÓMET",
+    "MILE", "MILES",
+    "DAY", "DAYS", "DIA", "DIAS", "DÍA", "DÍAS",
+    "EDAD", "SERVICIO", "SERVICE"
+]
+for c in df_fil.columns:
+    cn = str(c).upper()
+    if c in x_candidates:
+        continue
+    if any(k in cn for k in time_kw) and _looks_numeric_series(df_fil[c]):
+        x_candidates.append(c)
+
+# Quitar duplicados conservando orden
+seen = set()
+x_candidates = [x for x in x_candidates if not (x in seen or seen.add(x))]
+
+if not x_candidates:
+    st.info("No se encontraron variables tipo tiempo/uso para el eje X (fechas, horas, km, etc.).")
+    st.stop()
+
+x_var = st.selectbox(
+    "Eje X (solo 1) — Tiempo / Uso",
+    x_candidates,
+    index=0
+)
+
+# ---------- 2) Candidatos Y por categoría ----------
+# Partimos de variables numéricas válidas, excluimos IDs/textos/result/status/x
+exclude_y = set(exclude) | {'Date Reported'}
+exclude_y |= {x_var}
+exclude_y |= {c for c in df_fil.columns if str(c).startswith('RESULT_') or str(c).endswith('_status')}
+exclude_y |= {'Sample Bottle ID', 'Asset ID', 'Account Name', 'Asset Class', 'Tested Lubricant', 'Report Status'}
+
+numeric_candidates = []
+for c in df_fil.columns:
+    if c in exclude_y:
+        continue
+    if _looks_numeric_series(df_fil[c]):
+        numeric_candidates.append(c)
+
+# Clasificación basada en tus nombres reales (ej: "HIERRO (FE) - 6", "TAN (mgKOH/g) - 05", "ISO 4406 - xxx")
+wear_kw = [
+    "(FE)", "HIERRO", "IRON",
+    "(CU)", "COBRE", "COPPER",
+    "(PB)", "PLOMO", "LEAD",
+    "(AL)", "ALUMINIO", "ALUMINUM",
+    "(CR)", "CROMO", "CHROM",
+    "(NI)", "NIQUEL", "NÍQUEL", "NICK",
+    "(SN)", "ESTAÑO", "ESTANO", "TIN",
+    "(TI)", "TITANIO", "TITANIUM",
+    "(AG)", "PLATA", "SILVER",
+    "PQ", "DESGASTE", "WEAR"
+]
+health_kw = [
+    "VISC", "VISCO", "VISCOSIDAD",
+    "TAN", "TBN", "OXID", "NITR",
+    "SOOT", "HOLLIN", "HOLLO", "HOLÍN",
+    "FUEL", "DILUT", "DILUC", "DILUCIÓN", "DILUCION",
+    "GLYCOL", "Glicol", "GLICOL",
+    "FTIR"
+]
+cont_kw = [
+    "ISO", "4406", "PART", "PARTIC", "PARTÍCUL",
+    "(SI)", "SILICIO", "SILICON",
+    "DUST", "POLVO",
+    "WATER", "AGUA", "H2O",
+    "(NA)", "SODIO", "SODIUM",
+    "(K)", "POTASIO", "POTASS",
+    "COOL", "REFRIG", "ANTIFREE", "REGRIGER"
+]
+
+def _bucket(cols, kws):
+    out = []
+    for c in cols:
+        cn = str(c).upper()
+        if any(k in cn for k in kws):
+            out.append(c)
+    return out
+
+wear_cols = _bucket(numeric_candidates, wear_kw)
+health_cols = _bucket(numeric_candidates, health_kw)
+cont_cols = _bucket(numeric_candidates, cont_kw)
+
+picked = set(wear_cols) | set(health_cols) | set(cont_cols)
+other_cols = [c for c in numeric_candidates if c not in picked]
+
+st.caption("Selecciona 1 o más variables para Y (puedes mezclar categorías). En X solo puedes escoger 1 variable.")
+
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    y_wear = st.multiselect("Y — Desgaste", wear_cols, default=[])
+with c2:
+    y_health = st.multiselect("Y — Salud del lubricante", health_cols, default=[])
+with c3:
+    y_cont = st.multiselect("Y — Contaminación", cont_cols, default=[])
+with c4:
+    y_other = st.multiselect("Y — Otros (numéricos)", other_cols, default=[])
+
+# Unir Y (sin duplicados, conservando orden)
+y_vars = []
+for lst in [y_wear, y_health, y_cont, y_other]:
+    for v in lst:
+        if v not in y_vars:
+            y_vars.append(v)
+
+if not y_vars:
+    st.warning("Selecciona al menos 1 variable para el eje Y.")
+    st.stop()
+
+max_y = st.slider("Máximo de variables Y a graficar (para legibilidad)", 1, min(12, len(y_vars)), min(6, len(y_vars)))
+y_vars = y_vars[:max_y]
+
+# ---------- 3) Preparar datos ----------
+df_sc = df_fil[[x_var] + y_vars].copy()
+
+# Convertir X
+if x_var == 'Date Reported':
+    df_sc[x_var] = pd.to_datetime(df_sc[x_var], errors='coerce')
+elif _is_dateish_colname(x_var):
+    df_sc[x_var] = pd.to_datetime(df_sc[x_var], errors='coerce')
+else:
+    df_sc[x_var] = _to_numeric_clean(df_sc[x_var])
+
+# Convertir Y a numérico
+for y in y_vars:
+    df_sc[y] = _to_numeric_clean(df_sc[y])
+
+# limpiar filas inválidas
+df_sc = df_sc.dropna(subset=[x_var])
+if df_sc.empty:
+    st.warning("No hay datos válidos para graficar con la selección actual (X quedó vacío tras limpiar NaN).")
+    st.stop()
+
+# ---------- 4) Gráfica ----------
+st.subheader("📉 Dispersión")
+
+fig_sc, ax_sc = plt.subplots(figsize=(10, 5))
+
+plotted_any = False
+for y in y_vars:
+    df_tmp = df_sc.dropna(subset=[y])
+    if df_tmp.empty:
+        continue
+    ax_sc.scatter(df_tmp[x_var], df_tmp[y], alpha=0.7, s=18, label=y)
+    plotted_any = True
+
+if not plotted_any:
+    st.warning("Con la selección actual, todas las variables Y quedaron sin datos numéricos (NaN).")
+    st.stop()
+
+ax_sc.set_xlabel(x_var)
+ax_sc.set_ylabel("Variables Y")
+ax_sc.grid(True, alpha=0.25)
+
+# Autoformato si X es fecha
+if (x_var == 'Date Reported') or _is_dateish_colname(x_var):
+    fig_sc.autofmt_xdate()
+
+ax_sc.legend(loc='best', fontsize=9)
+fig_sc.tight_layout()
+st.pyplot(fig_sc, use_container_width=True)
 
