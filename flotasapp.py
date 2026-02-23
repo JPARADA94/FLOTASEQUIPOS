@@ -5,6 +5,8 @@
 #          controles de robustez (fechas NaT, pareto vacío), evita SettingWithCopy.
 # Nuevo (2026): Módulo de gráficas de dispersión (X tiempo/uso vs múltiples Y: desgaste/salud/contaminación)
 # FIX (2026): Slider robusto (evita min>max en reruns) + conteo de datos válidos por variable seleccionada
+# NUEVO (2026): Filtro por nombre de componente (COMPONENTE si existe; si no, usa Asset ID / EQUIPO)
+# FIX (2026): "Equipos analizados" y cálculo de intervalos usan COMPONENTE si existe (si no, Asset ID)
 
 import streamlit as st
 import pandas as pd
@@ -70,6 +72,7 @@ def prepare_archivo2(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df['Sample Bottle ID'] = df.index.astype(str)
 
+    # Asset ID técnico (siempre)
     df['Asset ID'] = df['EQUIPO'].astype(str)
 
     # RESULT_... desde columnas "... - Estado"
@@ -113,6 +116,13 @@ if df_raw['Date Reported'].isna().all():
     st.error("❌ No hay fechas válidas en FECHA_INFORME / Date Reported (NaT). Revisa el Excel.")
     st.stop()
 
+# ==========================================================
+# Clave de equipo REAL para métricas:
+# Si existe COMPONENTE, se usa COMPONENTE; si no, se usa Asset ID
+# ==========================================================
+ASSET_KEY_COL = 'COMPONENTE' if 'COMPONENTE' in df_raw.columns else 'Asset ID'
+
+
 # ========== Filtros uno por fila y por fecha ==========
 st.markdown("### 🎛️ Filtros de análisis")
 
@@ -136,6 +146,20 @@ lubs = st.multiselect(
     default=df_fil['Tested Lubricant'].dropna().unique()
 )
 df_fil = df_fil[df_fil['Tested Lubricant'].isin(lubs)]
+
+# ==========================
+# NUEVO: Filtro por componente (mejor opción)
+# - si existe COMPONENTE: filtra por COMPONENTE
+# - si no: filtra por Asset ID (EQUIPO)
+# ==========================
+component_col = 'COMPONENTE' if 'COMPONENTE' in df_fil.columns else 'Asset ID'
+
+componentes = st.multiselect(
+    "Selecciona componente (nombre de componente / equipo)",
+    df_fil[component_col].dropna().unique(),
+    default=df_fil[component_col].dropna().unique()
+)
+df_fil = df_fil[df_fil[component_col].isin(componentes)]
 
 # Copia para evitar SettingWithCopy y asegurar estabilidad
 df_fil = df_fil.copy()
@@ -178,17 +202,20 @@ if not st.session_state.get('analizado', False):
 st.markdown("### 🧾 Resumen general del análisis")
 
 df_nodup = df_fil.drop_duplicates(subset='Sample Bottle ID')
-equipos_analizados = df_nodup['Asset ID'].nunique()
+
+# FIX: Equipos analizados usa COMPONENTE si existe
+equipos_analizados = df_nodup[ASSET_KEY_COL].astype(str).nunique()
 
 fecha_min = df_nodup['Date Reported'].min()
 fecha_max = df_nodup['Date Reported'].max()
 fecha_min_txt = fecha_min.date() if pd.notna(fecha_min) else "N/A"
 fecha_max_txt = fecha_max.date() if pd.notna(fecha_max) else "N/A"
 
-equipos_con_2m = df_nodup.groupby('Asset ID').filter(lambda x: len(x) >= 2).copy()
+# FIX: Intervalos entre muestras también agrupa por COMPONENTE si existe
+equipos_con_2m = df_nodup.groupby(ASSET_KEY_COL).filter(lambda x: len(x) >= 2).copy()
 if not equipos_con_2m.empty:
-    equipos_con_2m = equipos_con_2m.sort_values(['Asset ID', 'Date Reported'])
-    equipos_con_2m['intervalo_dias'] = equipos_con_2m.groupby('Asset ID')['Date Reported'].diff().dt.days
+    equipos_con_2m = equipos_con_2m.sort_values([ASSET_KEY_COL, 'Date Reported'])
+    equipos_con_2m['intervalo_dias'] = equipos_con_2m.groupby(ASSET_KEY_COL)['Date Reported'].diff().dt.days
     prom = equipos_con_2m['intervalo_dias'].mean()
     promedio_intervalo = round(prom, 1) if pd.notna(prom) else "N/A"
 else:
@@ -196,7 +223,7 @@ else:
 
 st.markdown(f"""
 - Total muestras (únicas): **{df_nodup.shape[0]}**
-- Equipos analizados: **{equipos_analizados}**
+- Equipos analizados (según **{ASSET_KEY_COL}**): **{equipos_analizados}**
 - Rango de fechas: **{fecha_min_txt}** a **{fecha_max_txt}**
 - Intervalo medio entre muestras (≥2 muestras): **{promedio_intervalo}**
 """)
@@ -453,7 +480,7 @@ st.markdown("### 🔥 Mapa de calor de correlación")
 exclude = {
     'NOMBRE_CLIENTE', 'NOMBRE_OPERACION', 'EQUIPO', 'TIPO_EQUIPO', 'PRODUCTO', 'ESTADO_REPORTE',
     'Account Name', 'Asset Class', 'Tested Lubricant', 'Report Status', 'Sample Bottle ID', 'Asset ID',
-    'FECHA_INFORME'
+    'FECHA_INFORME', 'COMPONENTE'
 }
 
 valid_vars = []
@@ -616,7 +643,7 @@ if x_valid == 0:
 exclude_y = set(exclude) | {'Date Reported'}
 exclude_y |= {x_var}
 exclude_y |= {c for c in df_fil.columns if str(c).startswith('RESULT_') or str(c).endswith('_status')}
-exclude_y |= {'Sample Bottle ID', 'Asset ID', 'Account Name', 'Asset Class', 'Tested Lubricant', 'Report Status'}
+exclude_y |= {'Sample Bottle ID', 'Asset ID', 'Account Name', 'Asset Class', 'Tested Lubricant', 'Report Status', 'COMPONENTE'}
 
 numeric_candidates = []
 for c in df_fil.columns:
