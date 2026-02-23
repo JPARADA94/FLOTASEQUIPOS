@@ -4,6 +4,7 @@
 # Mejoras: cache de lectura, compatibilidad nativa con ARCHIVO 2, optimización combinaciones (Counter + itertuples),
 #          controles de robustez (fechas NaT, pareto vacío), evita SettingWithCopy.
 # Nuevo (2026): Módulo de gráficas de dispersión (X tiempo/uso vs múltiples Y: desgaste/salud/contaminación)
+# FIX (2026): Slider robusto (evita min>max en reruns) + conteo de datos válidos por variable seleccionada
 
 import streamlit as st
 import pandas as pd
@@ -12,7 +13,6 @@ import seaborn as sns
 import string
 from itertools import combinations
 from collections import Counter
-import re
 
 st.set_page_config(page_title="Análisis de Flotas - Mobil Serv", layout="wide")
 st.title("📊 Análisis de Flotas ")
@@ -88,6 +88,7 @@ def prepare_archivo2(df: pd.DataFrame) -> pd.DataFrame:
             )
 
     return df
+
 
 # ========== Carga de archivo ==========
 archivo = st.file_uploader("📁 Sube tu archivo Excel (.xlsx) - ARCHIVO 2", type=["xlsx"])
@@ -530,8 +531,6 @@ def _looks_numeric_series(s: pd.Series) -> bool:
 def _to_numeric_clean(s: pd.Series) -> pd.Series:
     """
     Convierte objetos tipo '12,3', '1.234', '12 hrs', '1,234.5' a número lo mejor posible.
-    Nota: para datos con separadores miles/decimales mixtos puede haber casos raros,
-    pero para laboratorio suele funcionar bien.
     """
     s2 = s.astype(str)
     s2 = s2.str.replace(r"\s", "", regex=True)
@@ -544,6 +543,24 @@ def _to_numeric_clean(s: pd.Series) -> pd.Series:
 def _is_dateish_colname(colname: str) -> bool:
     cn = str(colname).upper()
     return ("FECHA" in cn) or ("DATE" in cn)
+
+def _count_valid_x(df: pd.DataFrame, col: str) -> int:
+    """Cuenta datos válidos para X (fecha o numérico)."""
+    if col not in df.columns:
+        return 0
+    if (col == 'Date Reported') or _is_dateish_colname(col):
+        s = pd.to_datetime(df[col], errors='coerce')
+        return int(s.notna().sum())
+    # numérico
+    s = _to_numeric_clean(df[col])
+    return int(s.notna().sum())
+
+def _count_valid_y(df: pd.DataFrame, col: str) -> int:
+    """Cuenta datos válidos numéricos para Y."""
+    if col not in df.columns:
+        return 0
+    s = _to_numeric_clean(df[col])
+    return int(s.notna().sum())
 
 # ---------- 1) Candidatos para X (solo tiempo/uso) ----------
 x_candidates = []
@@ -589,8 +606,13 @@ x_var = st.selectbox(
     index=0
 )
 
+x_valid = _count_valid_x(df_fil, x_var)
+st.caption(f"📌 Datos válidos en X (**{x_var}**): **{x_valid}**")
+if x_valid == 0:
+    st.warning("La variable X seleccionada no tiene datos válidos. Cambia X.")
+    st.stop()
+
 # ---------- 2) Candidatos Y por categoría ----------
-# Partimos de variables numéricas válidas, excluimos IDs/textos/result/status/x
 exclude_y = set(exclude) | {'Date Reported'}
 exclude_y |= {x_var}
 exclude_y |= {c for c in df_fil.columns if str(c).startswith('RESULT_') or str(c).endswith('_status')}
@@ -603,7 +625,7 @@ for c in df_fil.columns:
     if _looks_numeric_series(df_fil[c]):
         numeric_candidates.append(c)
 
-# Clasificación basada en tus nombres reales (ej: "HIERRO (FE) - 6", "TAN (mgKOH/g) - 05", "ISO 4406 - xxx")
+# Clasificación por keywords (robusta para nombres reales)
 wear_kw = [
     "(FE)", "HIERRO", "IRON",
     "(CU)", "COBRE", "COPPER",
@@ -621,17 +643,17 @@ health_kw = [
     "TAN", "TBN", "OXID", "NITR",
     "SOOT", "HOLLIN", "HOLLO", "HOLÍN",
     "FUEL", "DILUT", "DILUC", "DILUCIÓN", "DILUCION",
-    "GLYCOL", "Glicol", "GLICOL",
+    "GLYCOL", "GLICOL", "Glicol",
     "FTIR"
 ]
 cont_kw = [
-    "ISO", "4406", "PART", "PARTIC", "PARTÍCUL",
+    "ISO", "4406", "PART", "PARTIC", "PARTÍCUL", "PARTICUL",
     "(SI)", "SILICIO", "SILICON",
     "DUST", "POLVO",
     "WATER", "AGUA", "H2O",
     "(NA)", "SODIO", "SODIUM",
     "(K)", "POTASIO", "POTASS",
-    "COOL", "REFRIG", "ANTIFREE", "REGRIGER"
+    "COOL", "REFRIG", "ANTIFREE", "REFRIGER"
 ]
 
 def _bucket(cols, kws):
@@ -672,16 +694,56 @@ if not y_vars:
     st.warning("Selecciona al menos 1 variable para el eje Y.")
     st.stop()
 
-max_y = st.slider("Máximo de variables Y a graficar (para legibilidad)", 1, min(12, len(y_vars)), min(6, len(y_vars)))
+# --------- Conteo de datos por Y (antes del slider) ---------
+counts = []
+for y in y_vars:
+    counts.append({"Variable Y": y, "Datos válidos": _count_valid_y(df_fil, y)})
+df_counts = pd.DataFrame(counts).sort_values("Datos válidos", ascending=False)
+
+st.markdown("**📌 Disponibilidad de datos (según selección actual):**")
+st.dataframe(df_counts, use_container_width=True, hide_index=True)
+
+# Filtrar automáticamente variables con 0 datos
+y_zero = df_counts[df_counts["Datos válidos"] == 0]["Variable Y"].tolist()
+if y_zero:
+    st.warning(
+        "Estas variables Y tienen **0** datos numéricos válidos y se van a excluir del gráfico:\n"
+        + "\n".join([f"- {v}" for v in y_zero])
+    )
+    y_vars = [v for v in y_vars if v not in y_zero]
+
+if not y_vars:
+    st.error("Todas las variables Y seleccionadas quedaron con 0 datos válidos. Selecciona otras variables.")
+    st.stop()
+
+# ---------- Slider robusto (FIX) ----------
+y_count = len(y_vars)
+max_allowed = min(12, y_count)
+
+if max_allowed < 1:
+    st.warning("Selecciona al menos 1 variable para Y.")
+    st.stop()
+
+default_val = min(6, max_allowed)
+
+if max_allowed == 1:
+    max_y = 1
+else:
+    max_y = st.slider(
+        "Máximo de variables Y a graficar (para legibilidad)",
+        min_value=1,
+        max_value=max_allowed,
+        value=default_val,
+        step=1
+    )
+
 y_vars = y_vars[:max_y]
 
 # ---------- 3) Preparar datos ----------
 df_sc = df_fil[[x_var] + y_vars].copy()
 
 # Convertir X
-if x_var == 'Date Reported':
-    df_sc[x_var] = pd.to_datetime(df_sc[x_var], errors='coerce')
-elif _is_dateish_colname(x_var):
+if (x_var == 'Date Reported') or _is_dateish_colname(x_var):
     df_sc[x_var] = pd.to_datetime(df_sc[x_var], errors='coerce')
 else:
     df_sc[x_var] = _to_numeric_clean(df_sc[x_var])
@@ -690,7 +752,7 @@ else:
 for y in y_vars:
     df_sc[y] = _to_numeric_clean(df_sc[y])
 
-# limpiar filas inválidas
+# limpiar filas inválidas en X
 df_sc = df_sc.dropna(subset=[x_var])
 if df_sc.empty:
     st.warning("No hay datos válidos para graficar con la selección actual (X quedó vacío tras limpiar NaN).")
@@ -710,7 +772,7 @@ for y in y_vars:
     plotted_any = True
 
 if not plotted_any:
-    st.warning("Con la selección actual, todas las variables Y quedaron sin datos numéricos (NaN).")
+    st.warning("Con la selección actual, todas las variables Y quedaron sin datos numéricos (NaN) tras limpieza.")
     st.stop()
 
 ax_sc.set_xlabel(x_var)
